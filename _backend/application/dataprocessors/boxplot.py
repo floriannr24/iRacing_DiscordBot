@@ -26,27 +26,24 @@ class Boxplot:
         self.iRacing_lapdata = response1["data"]
         self.iRacing_results = response2["data"]
 
-        unique_drivers = self.findUniqueDrivers(self.iRacing_lapdata)
+        user_carclass = self.searchUsersCarClass(817320)
+        unique_drivers = self.findUniqueDriversInCarclass(user_carclass)
 
         dictionary = {
             "metadata": {
                 "subsession_id": self.subsession_id,
                 "laps": None,
-                "timeframe": [],
-                "median": None,
-                "carclasses": self.findCarclasses(self.iRacing_results)
+                "series_name": self.getSeriesName()
             },
             "drivers": self.addDriverInfo(unique_drivers)
         }
 
-        dictionary = self.caclulateTimeframe(dictionary)
-        dictionary = self.calculateMedian(dictionary)
         dictionary = self.sortDictionary(dictionary)
         dictionary = self.removePositionsForDiscDisq(dictionary)
-        dictionary = self.numberOfLapsInEvent(dictionary)
+        # dictionary = self.lapsOfCarclass(user_carclass, dictionary)
 
         return {
-            "response": response1["response"],
+            "response": 200,
             "data": dictionary
         }
 
@@ -64,7 +61,7 @@ class Boxplot:
 
     def sortDictionary(self, dictionary):
         secondarySort = list(sorted(dictionary["drivers"],
-                                    key=lambda p: p["finish_position"]))  # secondary sort by key "finish_position"
+                                    key=lambda p: p["finish_position_in_class"]))  # secondary sort by key "finish_position"
 
         primarySort = list(sorted(secondarySort, key=lambda p: p["laps_completed"],
                                   reverse=True))  # primary sort by key "laps_completed", descending
@@ -88,10 +85,12 @@ class Boxplot:
 
         return iRacing_lapdata
 
-    def findUniqueDrivers(self, iRacing_lapdata_carclass):
+    def findUniqueDriversInCarclass(self, user_carclass):
         unique_drivers = set()
-        for item in iRacing_lapdata_carclass:
-            unique_drivers.add((item["cust_id"], item["display_name"]))
+
+        for driver in self.iRacing_results["session_results"][2]["results"]:
+            if driver["car_class_id"] == user_carclass:
+                unique_drivers.add((driver["cust_id"], driver["display_name"]))
         return unique_drivers
 
     def convertTimeformatToSeconds(self, laptime):
@@ -113,14 +112,12 @@ class Boxplot:
         intDict = {
             "name": driver_name,
             "id": driver_id,
-            "finish_position": self.set_finishPosition(list_of_positions),
             "finish_position_in_class": self.set_finishPositionInClass(driver_id),
             "result_status": self.set_resultStatus(driver_id),
             "laps_completed": self.set_lapsCompleted(list_of_positions),
             "laps": self.set_laps(driver_id),
-            "incidents": self.set_incidents(driver_id),
-            "car_class_id": self.set_carClass(driver_id)["id"],
             "car_class_name": self.set_carClass(driver_id)["name"],
+            "car_id": self.set_carId(driver_id),
             "personal_best": self.set_fastestPersonalLap(driver_id),
             "fastest_lap": self.set_ifDriverSetFastestLapInSession(driver_id)
         }
@@ -136,9 +133,6 @@ class Boxplot:
 
     def set_lapsCompleted(self, laps_completed_pos):
         return len(laps_completed_pos) - 1
-
-    def set_finishPosition(self, laps_completed_pos):
-        return laps_completed_pos[self.set_lapsCompleted(laps_completed_pos)]
 
     def set_resultStatus(self, driver_id):
         for data in self.iRacing_results["session_results"][2]["results"]:
@@ -200,33 +194,6 @@ class Boxplot:
         output["laps"] = [value for value in output["laps"] if value != -1 if value is not None]
         return output
 
-    def caclulateBoxplotData(self, output):
-
-        output["bpdata"] = {
-            "median": None,
-            "mean": None,
-            "Q1": None,
-            "Q3": None,
-            "whisker_top": None,
-            "whisker_bottom": None,
-            "fliers_top": None,
-            "fliers_bottom": None,
-            "laps_rndFactors": None
-        }
-
-        if output["laps"]:
-            output["bpdata"]["median"] = statistics.median(output["laps"])
-            output["bpdata"]["mean"] = statistics.mean(output["laps"])
-            output["bpdata"]["Q1"] = Q1 = np.quantile(output["laps"], 0.25)
-            output["bpdata"]["Q3"] = Q3 = np.quantile(output["laps"], 0.75)
-            output["bpdata"]["whisker_top"] = whisker_top = self.calc_whiskerTop(Q1, Q3, output["laps"])
-            output["bpdata"]["whisker_bottom"] = whisker_bottom = self.calc_whiskerBottom(Q1, Q3, output["laps"])
-            output["bpdata"]["fliers_top"] = fliers_top = self.calc_fliersTop(whisker_top, output["laps"])
-            output["bpdata"]["fliers_bottom"] = fliers_bottom = self.calc_fliersBottom(whisker_bottom, output["laps"])
-            output["bpdata"]["laps_rndFactors"] = self.calc_lapsRndmFactors(fliers_top, fliers_bottom, output["laps"])
-
-        return output
-
     def caclulateTimeframe(self, dictionary):
 
         tempMax = []
@@ -241,67 +208,6 @@ class Boxplot:
         fastestLap = min(tempMin)
 
         dictionary["metadata"]["timeframe"] = [fastestLap, slowestLap]
-
-        return dictionary
-
-    def calc_fliersTop(self, whisker_top, laps):
-
-        laps = sorted(laps)
-
-        if whisker_top:
-            candidates = [item for item in laps if item > whisker_top]
-            return candidates
-        else:
-            return []
-
-    def calc_fliersBottom(self, whisker_bottom, laps):
-
-        laps = sorted(laps, reverse=True)
-
-        if whisker_bottom:
-            candidates = [item for item in laps if item < whisker_bottom]
-            return candidates
-        else:
-            return []
-
-    def calc_whiskerTop(self, Q1, Q3, laps):
-
-        IQR15 = (Q3 - Q1) * 1.5
-        whiskerTop = Q3 + IQR15
-
-        laps = sorted(laps)
-
-        candidates = [item for item in laps if item < whiskerTop if item > Q3]
-
-        if not candidates:
-            return Q3
-        else:
-            return max(candidates)
-
-    def calc_whiskerBottom(self, Q1, Q3, laps):
-
-        IQR15 = (Q3 - Q1) * 1.5
-        whiskerBottom = Q1 - IQR15
-
-        laps = sorted(laps, reverse=True)
-
-        candidates = [item for item in laps if item > whiskerBottom if item < Q1]
-
-        if not candidates:
-            return Q1
-        else:
-            return min(candidates)
-
-    def calculateMedian(self, dictionary):
-
-        laps = []
-
-        for driver in dictionary["drivers"]:
-
-            for lap in driver["laps"]:
-                laps.append(lap)
-
-        dictionary["metadata"]["median"] = statistics.median(laps)
 
         return dictionary
 
@@ -333,7 +239,6 @@ class Boxplot:
 
         for data in self.iRacing_results["session_results"][2]["results"]:
             if data["cust_id"] == driver_id:
-                carClass["id"] = data["car_class_id"]
                 carClass["name"] = data["car_class_name"]
                 break
 
@@ -344,29 +249,15 @@ class Boxplot:
             if data["cust_id"] == driver_id:
                 return data["finish_position_in_class"] + 1
 
-    def findCarclasses(self, iRacing_results):
-        unique_cc = set()
-        for item in iRacing_results["session_results"][2]["results"]:
-            unique_cc.add(item["car_class_id"])
-        unique_cc_list = list(unique_cc)
-        unique_cc_list.sort()
-
-        return unique_cc_list
-
     def addDriverInfo(self, unique_drivers):
 
         driverArray = []
 
         for driver in unique_drivers:
             output = self.collectInfo(driver)
-            # output = self.deleteInvalidLaptimes(output)
-            output = self.caclulateBoxplotData(output)
             driverArray.append(output)
 
         return driverArray
-
-    def set_personalBestLap(self, driver_id):
-        pass
 
     def set_ifDriverSetFastestLapInSession(self, driver_id):
         return True if self.findUserWithFastestLap(driver_id) else False
@@ -395,30 +286,15 @@ class Boxplot:
                     if record["incident"] == False and record["personal_best_lap"] == True:
                         return self.convertTimeformatToSeconds(lap_time)
 
-    def findFastestLap(self, driver_id):
-        pass
-
-    def set_incidents(self, driver_id):
-        laps = []
-        for i, record in enumerate(self.iRacing_lapdata):
-            if record["cust_id"] == driver_id:
-                laps.append(
-                    {"lap": record["lap_number"] - 1, "incidents": record["incident"], "events": record["lap_events"]})
-        return laps
-
-    def numberOfLapsInEvent(self, dict):
-        # depends on class
-
-        dict["metadata"]["laps"] = {}
-        carclasses = dict["metadata"]["carclasses"]
-
-        for cclass in carclasses:
-            cclass_laps = self.lapsOfCarclass(cclass, dict)
-            dict["metadata"]["laps"][str(cclass)] = cclass_laps
-
-        return dict
-
     def lapsOfCarclass(self, cclass, dict):
         for driver in dict["drivers"]:
             if driver["car_class_id"] == cclass and driver["finish_position_in_class"] == 1:
                 return len(driver["laps"])
+
+    def getSeriesName(self):
+        return self.iRacing_results["series_name"]
+
+    def set_carId(self, driver_id):
+        for data in self.iRacing_results["session_results"][0]["results"]:
+            if data["cust_id"] == driver_id:
+                return data["car_id"]
