@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import matplotlib
@@ -47,11 +48,11 @@ def getRecentRaces(cust_id: int):
 
 @app.get("/diagram/boxplot/{subsession_id}", status_code=status.HTTP_200_OK)
 def getBoxplotData(subsession_id: int):
-    responseData = Boxplot(session).get_Boxplot_Data(subsession_id)
+    responseData = Boxplot(session).get_Boxplot_Data(subsession_id, 817320)
 
     # responseData = read_file_content()
 
-    BoxplotDiagram(data=responseData)
+    # BoxplotDiagram(data=responseData)
 
     # if responseIsValid(responseData["response"]):
     #     return responseData["data"]
@@ -81,7 +82,7 @@ def getAccountInfo(cust_id: int, response: Response):
     #     response.status_code = responseData["response"].status_code
     #     return
 
-# getBoxplotData(72424281) # sinlgeclass
-getBoxplotData(72423313) # multiclass
+getBoxplotData(72424281) # sinlgeclass
+# getBoxplotData(72423313) # multiclass
 
 # getRecentRaces(817320)

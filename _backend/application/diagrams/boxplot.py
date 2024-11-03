@@ -6,6 +6,8 @@ import numpy as np
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from _backend.application.diagrams.diagram import Diagram
+from _backend.application.diagrams.images.imageSrc import readImagesForCarId
+
 
 # todo: iRating next to names?
 
@@ -16,7 +18,7 @@ class BoxplotDiagram(Diagram):
         self.laps = self.getLaps(data)
         self.finishPositions = self.getFinishPositions(data)
         self.driverNames = self.getDriverNames(data)
-        self.userDriverName = "Florian Niedermeier2"
+        self.userDriverName = self.getUserDriverName(data)
         self.seriesName = self. getSeriesName(data)
         self.carIds = self.getCarIds(data)
 
@@ -54,7 +56,7 @@ class BoxplotDiagram(Diagram):
         #     self.ax.set_xticklabels(self.drivers_raw, rotation=45, rotation_mode="anchor", ha="right")
 
         # todo: parameterize
-        showLaptimes = False
+        showLaptimes = True
         showMedian = False
 
         self.drawDISCDISQ()
@@ -155,7 +157,7 @@ class BoxplotDiagram(Diagram):
         self.ax3 = self.ax1.secondary_xaxis(location=0)
         self.ax3.set_xticks([i for i in range(1, len(self.driverNames) + 1)])
         self.ax3.set_xticklabels(["" for i in range(1, len(self.driverNames) + 1)])
-        imgs = self.readImagesForCarId(self.carIds)
+        imgs = readImagesForCarId(self.carIds)
         for i, im in enumerate(imgs):
 
             oi = OffsetImage(im, zoom=0.05)
@@ -248,42 +250,9 @@ class BoxplotDiagram(Diagram):
     def getCarIds(self, data):
         return [driver["car_id"] for driver in data["data"]["drivers"]]
 
-    def readImagesForCarId(self, carIds):
-
-        imgs = []
-        for id in carIds:
-
-            imageSrc = self.findImageSrc(id)
-
-            imagePath = f"../application/diagrams/images/cars/{imageSrc}.png"
-            try:
-                img = plt.imread(imagePath)
-                imgs.append(img)
-            except FileNotFoundError:
-                print(f"Image not found: {imagePath}")
-            except Exception as e:
-                print(f"Error loading image: {imagePath}, {e}")
-        return imgs
-
-    def findImageSrc(self, id):
-
-        mcl = [43,71,188,135]
-        bmw = [55,159,122,132,189]
-        porsche = [88,100,102,119,137,143,169,174]
-        merc = [156,157,161]
-        aston = [65, 150]
-
-        if id in mcl:
-            return "mclaren"
-        elif id in bmw:
-            return "bmw"
-        elif id in porsche:
-            return "porsche"
-        elif id in merc:
-            return "merc"
-        elif id in aston:
-            return "aston"
-
     def roundDown(self, laptime):
         # round down to the next 0.5 step
         return math.floor(laptime * 2) / 2
+
+    def getUserDriverName(self, data):
+        return data["data"]["metadata"]["user_driver_name"]

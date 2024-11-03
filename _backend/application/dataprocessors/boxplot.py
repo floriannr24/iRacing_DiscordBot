@@ -3,21 +3,20 @@ import numpy as np
 from _backend.application.data.laps_multi import requestLapsMulti
 from _backend.application.data.results_multi import requestResultsMulti
 from _backend.application.sessionbuilder.session_builder import responseIsValid
+import asyncio
+import requests
 
 class Boxplot:
     def __init__(self, session):
-        self.subsession_id = None
         self.session = session
         self.iRacing_lapdata = None
         self.iRacing_results = None
 
-    def get_Boxplot_Data(self, subsession_id):
-
-        self.subsession_id = subsession_id
+    def get_Boxplot_Data(self, subsession_id, userId):
 
         # get session application.data from iRacingAPI
-        response1 = requestLapsMulti(self.subsession_id, self.session)
-        response2 = requestResultsMulti(self.subsession_id, self.session)
+        response1 = requestLapsMulti(subsession_id, self.session)
+        response2 = requestResultsMulti(subsession_id, self.session)
 
         # abort action if response is not 200
         if not responseIsValid(response1["response"]):
@@ -26,14 +25,16 @@ class Boxplot:
         self.iRacing_lapdata = response1["data"]
         self.iRacing_results = response2["data"]
 
-        user_carclass = self.searchUsersCarClass(817320)
-        unique_drivers = self.findUniqueDriversInCarclass(user_carclass)
+        user_carclass = self.searchUsersCarClass(userId)
+        unique_drivers = self.findUniqueDriversInCarclassOfUserDriver(user_carclass)
 
         dictionary = {
             "metadata": {
-                "subsession_id": self.subsession_id,
+                "subsession_id": subsession_id,
                 "laps": None,
-                "series_name": self.getSeriesName()
+                "series_name": self.getSeriesName(),
+                "user_driver_id": userId,
+                "user_driver_name": self.getUserDriverName(userId)
             },
             "drivers": self.addDriverInfo(unique_drivers)
         }
@@ -70,22 +71,7 @@ class Boxplot:
 
         return dictionary
 
-    def filterByCarClass(self, carclass_id):
-        iRacing_results = []
-        iRacing_lapdata = []
-
-        for results in self.iRacing_results["session_results"][2]["results"]:
-            if results["car_class_id"] == carclass_id:
-                iRacing_results.append(results["cust_id"])
-
-        for driver in iRacing_results:
-            for lapdata in self.iRacing_lapdata:
-                if driver == lapdata["cust_id"]:
-                    iRacing_lapdata.append(lapdata)
-
-        return iRacing_lapdata
-
-    def findUniqueDriversInCarclass(self, user_carclass):
+    def findUniqueDriversInCarclassOfUserDriver(self, user_carclass):
         unique_drivers = set()
 
         for driver in self.iRacing_results["session_results"][2]["results"]:
@@ -98,9 +84,6 @@ class Boxplot:
             return laptime / 10000
         else:
             return None
-
-    def scanForInvalidTypes(self, laptimes, arg1, arg2):
-        return [laptime for laptime in laptimes if laptime != arg1 if laptime != arg2]
 
     def collectInfo(self, driver):
 
@@ -139,35 +122,6 @@ class Boxplot:
             if driver_id == data["cust_id"]:
                 return data["reason_out"]
 
-    def extractLaptimes(self, all_laptimes, raceCompleted):
-
-        numberOfDrivers = len(all_laptimes)
-        drivers_raw = []
-
-        if raceCompleted:
-            laps = []
-            for lapdata in all_laptimes:
-                if lapdata["result_status"] == "Running":
-                    laps.append(lapdata["laps"])
-                    drivers_raw.append(lapdata["driver"])
-                else:
-                    continue
-            return laps
-        else:
-            laps = []
-            for lapdata in all_laptimes:
-                if lapdata["result_status"] == "Disqualified" or lapdata["result_status"] == "Disconnected":
-                    laps.append(lapdata["laps"])
-                    drivers_raw.append(lapdata["driver"])
-                else:
-                    continue
-
-            # fill up indices, so DISQ and DISC drivers are put to the last places in the diagram
-            indicesToFillUp = numberOfDrivers - len(laps)
-            for i in range(indicesToFillUp):
-                laps.insert(0, "")
-            return laps
-
     def set_laps(self, driver_id):
 
         session_time0 = 0
@@ -189,37 +143,6 @@ class Boxplot:
                     laps.append(self.convertTimeformatToSeconds(lap_time))
 
         return laps
-
-    def deleteInvalidLaptimes(self, output):
-        output["laps"] = [value for value in output["laps"] if value != -1 if value is not None]
-        return output
-
-    def caclulateTimeframe(self, dictionary):
-
-        tempMax = []
-        tempMin = []
-
-        for driver in dictionary["drivers"]:
-            if driver["laps"]:
-                tempMax.append(max(driver["laps"]))
-                tempMin.append(min(driver["laps"]))
-
-        slowestLap = max(tempMax)
-        fastestLap = min(tempMin)
-
-        dictionary["metadata"]["timeframe"] = [fastestLap, slowestLap]
-
-        return dictionary
-
-    def calc_lapsRndmFactors(self, fliers_top, fliers_bottom, laps):
-
-        randoms = np.random.normal(0, 1, len(laps)).tolist()
-        excludedIndex = [i for i, x in enumerate(laps) if x in fliers_top or x in fliers_bottom]
-
-        for i in excludedIndex:
-            randoms[i] = 0
-
-        return randoms
 
     def removePositionsForDiscDisq(self, dictionary):
 
@@ -286,6 +209,7 @@ class Boxplot:
                     if record["incident"] == False and record["personal_best_lap"] == True:
                         return self.convertTimeformatToSeconds(lap_time)
 
+    # dont delete, maybe needed for delta plot
     def lapsOfCarclass(self, cclass, dict):
         for driver in dict["drivers"]:
             if driver["car_class_id"] == cclass and driver["finish_position_in_class"] == 1:
@@ -298,3 +222,8 @@ class Boxplot:
         for data in self.iRacing_results["session_results"][0]["results"]:
             if data["cust_id"] == driver_id:
                 return data["car_id"]
+
+    def getUserDriverName(self, id):
+        for driver in self.iRacing_results["session_results"][2]["results"]:
+            if driver["cust_id"] == id:
+                return driver["display_name"]
