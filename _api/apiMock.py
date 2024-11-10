@@ -8,3 +8,8 @@ def read_file_content():
 
     with open(file_path, 'r') as f:
         return json.load(f)
+
+
+def write_file_content(data):
+    with open("data.json", "w") as file:
+        json.dump(data, file, indent=4)

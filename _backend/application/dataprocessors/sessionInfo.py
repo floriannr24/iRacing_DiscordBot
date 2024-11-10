@@ -1,7 +1,6 @@
 import statistics
-from _backend.application.data.results_multi import requestResultsMulti
-from _backend.application.data.subsession_Info import requestSessionInfo
-from _backend.application.sessionbuilder.session_builder import responseIsValid
+from _backend.application.service.results_multi import requestResultsMulti
+from _backend.application.service.subsession_Info import requestSessionInfo
 
 
 class SessionInfo:
@@ -23,8 +22,8 @@ class SessionInfo:
         if not responseIsValid(response1["response"]):
             return response1
 
-        self.iRacing_results = response1["data"]
-        self.iRacing_subsessionInfo = response2["data"]
+        self.iRacing_results = response1["service"]
+        self.iRacing_subsessionInfo = response2["service"]
 
         exportDict = {
             "session_start_time": self.get_session_start_time(),
@@ -39,7 +38,7 @@ class SessionInfo:
 
         return {
             "response": response1["response"],
-            "data": exportDict
+            "service": exportDict
         }
 
     def get_finish_position(self, cust_id):

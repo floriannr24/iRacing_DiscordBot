@@ -1,102 +1,126 @@
 import math
+import os.path
 import statistics
+import uuid
 from datetime import timedelta
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from _backend.application.diagrams.diagram import Diagram
-from _backend.application.diagrams.images.imageSrc import readImagesForCarId
+from _backend.application.diagrams.images.imageSrc import readCarLogoImages
 
-
-# todo: iRating next to names?
 
 class BoxplotDiagram(Diagram):
-    def __init__(self, data):
+    def __init__(self, data, **kwargs):
         self.boxplot = None
 
+        # data
         self.laps = self.getLaps(data)
         self.finishPositions = self.getFinishPositions(data)
         self.driverNames = self.getDriverNames(data)
         self.userDriverName = self.getUserDriverName(data)
-        self.seriesName = self. getSeriesName(data)
+        self.userDriverIndex = self.getUserDriverIndex(self.driverNames, self.userDriverName)
+        self.seriesName = self.getSeriesName(data)
+        self.sof =  self.getSof(data)
+        self.track = self.getTrack(data)
+        self.sessionTime = self.getSessionTime(data)
         self.carIds = self.getCarIds(data)
+        self.runningLaps = self.getRunningLaps(data)
+        self.subsessionId = self.getSubsessionId(data)
+
+        self.showRealName = kwargs.get('showRealName', None)
+
+        # colors
+        self.boxplot_facecolor = "#1A88FF"
+        self.boxplot_user_facecolor = "#BFDDFF"
+        self.boxplot_line_color = "#000000"
+        self.lap_color = "yellow"
+        self.lap_edge_color = "#808000"
+        self.boxplot_flier_color = "#000000"
 
         numberOfDrivers = len(self.driverNames)
 
-        super().__init__(50*numberOfDrivers, 650)
-        self.draw()
+        # about 50px per single boxplot
+        if numberOfDrivers < 12:
+            px_width = 50 * 13
+        else:
+            px_width = 50 * numberOfDrivers
+
+        super().__init__(px_width, 700)
 
     def getDriverNames(self, data):
-        return [driver["name"] for driver in data["data"]["drivers"]]
+        return [driver["name"] for driver in data["service"]["drivers"]]
 
     def draw(self):
 
         self.boxplot = self.drawBoxplot()
 
         # format boxplot
-        yMin, yMax = self.calculateYMinMax(self.laps)
+        yMin, yMax = self.calculateYMinMax(self.laps, self.runningLaps)
 
         self.limitYAxis(yMin, yMax)
         self.setYLabels(yMin, yMax)
         self.setXLabels(self.driverNames)
-        self.setTitle()
-
-        # if options.get("showLaptimes") == 1:
-        #     self.draw_laptimes()
-        #
-        #
-        # self.draw_medianLine()
-        #
-        # if options.get("showDISC") == 0:
-        #     self.ax.set_xticks(np.arange(1, self.number_Of_Drivers + 1))
-        #     self.ax.set_xticklabels(self.drivers_raw, rotation=45, rotation_mode="anchor", ha="right")
-        # else:
-        #     self.ax.set_xticks(np.arange(1, self.number_Of_Drivers + 1))
-        #     self.ax.set_xticklabels(self.drivers_raw, rotation=45, rotation_mode="anchor", ha="right")
+        self.setTitleTexts()
 
         # todo: parameterize
-        showLaptimes = True
-        showMedian = False
+        showLaptimes = False
+        showMedianLong = False
+        showFakeName = not self.showRealName
 
         self.drawDISCDISQ()
 
         if (showLaptimes):
             self.drawLaptimes()
 
-        if (showMedian and self.userDriverName):
-            self.colorMedianLineFasterSlower()
+        if (showMedianLong):
+            self.colorMedianLineFasterSlower(self.userDriverIndex)
 
-        if (self.userDriverName):
-            try:
-                self.drivername_bold(self.userDriverName)
-                self.userBoxplot_brightBlue(self.userDriverName)
-            except ValueError:
-                pass
+        if (showFakeName):
+            displayName = "----- Yourself ---->"
+            self.replaceName(self.userDriverIndex, displayName)
+
+        self.drivername_bold(self.userDriverIndex)
+        self.userBoxplot_brightBlue(self.userDriverIndex)
 
         plt.tight_layout()
-        # plt.subplots_adjust(left=0.08, right=0.98, top=0.93, bottom=0.38)
-        plt.show()
-        # plt.savefig("figure.png")
+        plt.subplots_adjust(top=0.96-0.032*3.5)
+        # plt.subplots_adjust(left=0.105, right=0.97, top=0.84, bottom=0.33)
 
-    def setTitle(self):
-        self.ax1.set_title(self.seriesName, color="#C8CBD0", size=15, fontweight="1000", pad=10)
+        # plt.show()
 
-    def userBoxplot_brightBlue(self, name):
-        index = self.driverNames.index(name)
+        imagePath = self.getImagePath()
+        plt.savefig(imagePath)
+        plt.close()
+        return imagePath
+
+    def setTitleTexts(self):
+        locationSeriesName = 0.96
+        space = 0.032
+        self.fig.text(0.5, locationSeriesName,  self.seriesName, fontsize=16, fontweight="1000", color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesName-space, self.track, color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesName-space*2, f"{self.sessionTime} | SOF: {self.sof}", color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesName-space*3, f"ID: {self.subsessionId}", color=self.text_color, horizontalalignment="center")
+
+    def userBoxplot_brightBlue(self, index):
         if not self.finishPositions[index] == "DISC" or not self.finishPositions[index] == "DISQ":
             userBP = self.boxplot["boxes"][index]
-            userBP.set_facecolor("#a6cfff")
+            userBP.set_facecolor(self.boxplot_user_facecolor)
 
-    def drivername_bold(self, name):
-        index = self.driverNames.index(name)
-        ax1 = self.ax1.get_xticklabels()[index]
-        ax1.set_fontweight(1000)
-        ax2 = self.ax2.get_xticklabels()[index]
-        ax2.set_fontweight(1000)
+    def drivername_bold(self, index):
+        labelax1 = self.ax1.get_xticklabels()[index]
+        labelax1.set_fontweight(1000)
+        labelax1.set_color(self.text_highlight_color)
 
-    def colorMedianLineFasterSlower(self):
-        medianTimeOfUserdriver = self.findMedianOfUserdriver(self.userDriverName)
+        labelax2 = self.ax2.get_xticklabels()[index]
+        labelax2.set_fontweight(1000)
+        labelax2.set_color(self.text_highlight_color)
+
+    def colorMedianLineFasterSlower(self, index):
+        medianTimeOfUserdriver = self.boxplot["medians"][index].get_ydata()[0]
         for median in self.boxplot["medians"]:
             medianTime = median.get_ydata()[0]
             if medianTime == medianTimeOfUserdriver:
@@ -106,29 +130,23 @@ class BoxplotDiagram(Diagram):
             elif medianTime > medianTimeOfUserdriver:
                 median.set(color="#22ff1a")
 
-    def findMedianOfUserdriver(self, name):
-        index = self.driverNames.index(name)
-        return self.boxplot["medians"][index].get_ydata()[0]
-
     def getLaps(self, data):
-        return [driver["laps"] for driver in data["data"]["drivers"]]
+        return [driver["laps"] for driver in data["service"]["drivers"]]
 
     def setYLabels(self, ymin, ymax):
         number_of_seconds_shown = np.arange(ymin, ymax + 0.5, 0.5)
         self.ax1.set_yticks(number_of_seconds_shown)
-        self.ax1.set_yticklabels(self.calculateMinutesYAxis(number_of_seconds_shown), fontsize="large")
+        self.ax1.set_yticklabels(self.calculateMinutesYAxis(number_of_seconds_shown), fontsize="large", color=self.text_color)
 
     def drawBoxplot(self):
 
-        lineColor = "#000000"
-
         return self.ax1.boxplot(self.laps,
                                 patch_artist=True,
-                                boxprops=dict(facecolor="#1a88ff", color=lineColor),
-                                flierprops=dict(markeredgecolor='#000000'),
-                                medianprops=dict(color=lineColor, linewidth=1.5),
-                                whiskerprops=dict(color=lineColor),
-                                capprops=dict(color=lineColor),
+                                boxprops=dict(facecolor=self.boxplot_facecolor, color=self.boxplot_line_color),
+                                flierprops=dict(markeredgecolor=self.boxplot_flier_color),
+                                medianprops=dict(color=self.boxplot_line_color, linewidth=1.5),
+                                whiskerprops=dict(color=self.boxplot_line_color),
+                                capprops=dict(color=self.boxplot_line_color),
                                 zorder=2,
                                 widths=0.8,
                                 meanprops=dict(marker="o", markerfacecolor="red", fillstyle="full", markeredgecolor="None")
@@ -140,32 +158,32 @@ class BoxplotDiagram(Diagram):
     def setXLabels(self, driverNames):
 
         paddingToAx1 = 38 # finish pos
-        paddingToAx2 = 18 # name
+        paddingToAx2 = 20 # name
 
         # finish positions
         self.ax1.set_xticks([i for i in range(1, len(self.driverNames)+1)])
         self.ax1.tick_params(axis="x", pad=paddingToAx1)
-        self.ax1.set_xticklabels(self.finishPositions, color="#C8CBD0", fontsize="large")
+        self.ax1.set_xticklabels(self.finishPositions, color=self.text_color, fontsize="large")
 
         # driver names
         self.ax2 = self.ax1.secondary_xaxis(location=0)
         self.ax2.set_xticks([i for i in range(1, len(self.driverNames)+1)])
         self.ax2.tick_params(axis="x", pad=paddingToAx2 + paddingToAx1)
-        self.ax2.set_xticklabels(driverNames, rotation=45, rotation_mode="anchor", ha="right", color="#C8CBD0", fontsize="large")
+        self.ax2.set_xticklabels(driverNames, rotation=45, rotation_mode="anchor", ha="right", color=self.text_color, fontsize="large")
 
         # car logos
         self.ax3 = self.ax1.secondary_xaxis(location=0)
         self.ax3.set_xticks([i for i in range(1, len(self.driverNames) + 1)])
         self.ax3.set_xticklabels(["" for i in range(1, len(self.driverNames) + 1)])
-        imgs = readImagesForCarId(self.carIds)
+        imgs = readCarLogoImages(self.carIds)
         for i, im in enumerate(imgs):
 
-            oi = OffsetImage(im, zoom=0.05)
+            oi = OffsetImage(im, zoom=0.045, resample=True)
             oi.image.axes = self.ax3
             ab = AnnotationBbox(oi,
                                 (i+1,0),
                                 frameon=False,
-                                box_alignment=(0.48, 1.45)
+                                box_alignment=(0.48, 1.47)
                                 )
             self.ax3.add_artist(ab)
 
@@ -178,10 +196,10 @@ class BoxplotDiagram(Diagram):
             self.ax1.scatter(scatter[i], self.laps[i],
                              zorder=4,
                              alpha=1,
-                             c="yellow",
+                             c=self.lap_color,
                              s=20,
                              linewidths=0.6,
-                             edgecolors="#808000"
+                             edgecolors=self.lap_edge_color
                              )
 
     def drawDISCDISQ(self):
@@ -212,13 +230,15 @@ class BoxplotDiagram(Diagram):
 
         plt.plot(x1, y1, zorder=3, linestyle="dashed", color="#C2C5CA")
 
-    def calculateYMinMax(self, laps):
+    def calculateYMinMax(self, laps, runningLaps):
         fastestLaptime = self.boxplot["caps"][0].get_ydata()[0]
         yMin = self.roundDown(fastestLaptime)
 
-        allLaps = [item for sublist in laps for item in sublist]
-        percentile_85 = np.quantile(allLaps, 0.85) # top 85% of laps
-        yMax = round(percentile_85, 0)
+        allLaps = [item for sublist in runningLaps for item in sublist]
+        topXpercentOfLaps = np.quantile(allLaps, 0.82) # top x% of laps (non disq/disc)
+        #todo: stddeviation?
+        #todo: more drivers = more slower laps?
+        yMax = round(topXpercentOfLaps, 0)
 
         return yMin, yMax
 
@@ -242,17 +262,47 @@ class BoxplotDiagram(Diagram):
         return yticks
 
     def getSeriesName(self, data):
-        return data["data"]["metadata"]["series_name"]
+        return data["service"]["metadata"]["series_name"]
 
     def getFinishPositions(self, data):
-        return [driver["finish_position_in_class"] for driver in data["data"]["drivers"]]
+        return [driver["finish_position_in_class"] for driver in data["service"]["drivers"]]
 
     def getCarIds(self, data):
-        return [driver["car_id"] for driver in data["data"]["drivers"]]
+        return [driver["car_id"] for driver in data["service"]["drivers"]]
 
     def roundDown(self, laptime):
         # round down to the next 0.5 step
         return math.floor(laptime * 2) / 2
 
     def getUserDriverName(self, data):
-        return data["data"]["metadata"]["user_driver_name"]
+        return data["service"]["metadata"]["user_driver_name"]
+
+    def getSof(self, data):
+        return data["service"]["metadata"]["sof"]
+
+    def getTrack(self, data):
+        return data["service"]["metadata"]["track"]
+
+    def getSessionTime(self, data):
+        return data["service"]["metadata"]["session_time"]
+
+    def getRunningLaps(self, data):
+        # all laps of drivers whose final status is not "Disqualified" or "Disconnected"
+        return [driver["laps"] for driver in data["service"]["drivers"] if driver["result_status"] == "Running"]
+
+    def replaceName(self, index, displayName):
+        labels = [item.get_text() for item in self.ax2.get_xticklabels()]
+        labels[index] = displayName
+        self.ax2.set_xticklabels(labels)
+
+    def getUserDriverIndex(self, driverNames, name):
+        return driverNames.index(name)
+
+    def getSubsessionId(self, data):
+        return data["service"]["metadata"]["subsession_id"]
+
+    def getImagePath(self):
+        imagePath = Path().absolute().parent / 'images'
+        figureName = f"boxplot_{str(uuid.uuid4())}.png"
+        location = str(imagePath / figureName)
+        return location

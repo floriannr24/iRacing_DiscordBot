@@ -1,9 +1,6 @@
 # for sproadic use
 import os
-
 import requests
-from _backend.application.sessionbuilder.session_builder import responseIsValid, SessionBuilder
-
 sessionBuilder = SessionBuilder()
 sessionBuilder.authenticate()
 session = sessionBuilder.session
@@ -13,13 +10,6 @@ def requestCarLogos(session):
 
     # iRacingAPI
     response = session.get('https://members-ng.iracing.com/data/car/assets')
-
-    # check if iRacing API is up and subsessionId is valid
-    if not responseIsValid(response):
-        return {
-            "response": response,
-            "data": None
-        }
 
     data = response.json()
     data = requests.get(data["link"]).json()
@@ -45,7 +35,7 @@ def requestSeriesLogos(session):
     if not responseIsValid(response):
         return {
             "response": response,
-            "data": None
+            "service": None
         }
 
     data = response.json()

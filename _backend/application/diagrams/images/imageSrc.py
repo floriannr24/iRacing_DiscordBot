@@ -1,13 +1,16 @@
+from pathlib import Path
+
 from matplotlib import pyplot as plt
 
 
-def readImagesForCarId(carIds):
+def readCarLogoImages(carIds):
     imgs = []
     for id in carIds:
 
-        imageSrc = findImageSrc(id)
-
-        imagePath = f"../application/diagrams/images/cars/{imageSrc}.png"
+        imagePath = Path().absolute().parent / '_backend' / 'application' / 'diagrams' / 'images' / 'cars'
+        imageName = str(findImageSrc(id))
+        imageNameWithFileFormat = f"{imageName}.png"
+        imagePath = str(imagePath / imageNameWithFileFormat)
         try:
             img = plt.imread(imagePath)
             imgs.append(img)
@@ -18,7 +21,6 @@ def readImagesForCarId(carIds):
     return imgs
 
 def findImageSrc(id):
-    # id = 171
     mcl = [43, 71, 188, 135]
     bmw = [55, 159, 122, 132, 189]
     porsche = [88, 100, 102, 119, 137, 143, 169, 174]
@@ -43,10 +45,20 @@ def findImageSrc(id):
     dirtcarRacing = [78, 79, 80, 83, 85, 95]
     superDirtcar = [131, 134]
     superFormula = [171, 172]
-    usacRacing = [67, 89]
+    usacRacing = [89]
     buick = [154]
     offroadRacingSeries = [104, 107, 113]
-
+    nissan = [77]
+    vee = [142]
+    radical = [149, 13]
+    cadillac = [41] # others?
+    promazda = [4]
+    fr20 = [74]
+    fr35 = [105]
+    superFormulaLights = [178]
+    solidrockcarriers = [164]
+    mazda = [67, 34, 35]
+    renault = [162]
 
     if id in mcl:
         return "mclaren"
@@ -100,5 +112,30 @@ def findImageSrc(id):
         return "usacracing"
     elif id in superFormula:
         return "superformula"
+    elif id in cadillac:
+        return "cadillac"
+    elif id in nissan:
+        return "nissan"
+    elif id in vee:
+        return "vee"
+    elif id in radical:
+        return "radical"
+    elif id in promazda:
+        return "promazda"
+    elif id in fr20:
+        return "fr20"
+    elif id in fr35:
+        return "fr35"
+    elif id in superFormulaLights:
+        return "superFormulaLights"
+    elif id in solidrockcarriers:
+        return "solidrockcarriers"
+    elif id in mazda:
+        return "mazda"
+    elif id in renault:
+        return "renault"
+
     elif id in _nan:
         return "empty"
+    else:
+        return str(id)

@@ -4,13 +4,13 @@ class Delta:
         pass
         # def get_Delta_Data(self, beforeDrivers, afterDrivers):
         #
-        #     # get session application.data from iRacingAPI + FuzzwahAPI
+        #     # get session application.service from iRacingAPI + FuzzwahAPI
         #     self.iRacing_results = ResultsMulti(self.subsession_id, self.session).requestResultsMulti()
         #     self.iRacing_lapdata = LapsMulti(self.subsession_id, self.session).requestLapsMulti()
         #
         #     carclass_id = self.gen_searchUsersCarClass("Florian Niedermeier2")  # search carclass id of user
         #     iRacingData_carclass, fuzzData_carclass = self.gen_filterByCarClass(
-        #         carclass_id)  # get only application.data for corresponding carclass
+        #         carclass_id)  # get only application.service for corresponding carclass
         #     unique_drivers = self.gen_findUniqueDrivers(iRacingData_carclass)  # find unique drivers in said carclass
         #
         #     output = self.delta_collectInfo(iRacingData_carclass, unique_drivers)  # collect info in dictionary
@@ -33,10 +33,10 @@ class Delta:
         #         output = self.pace_collectInfo(irData, name)
         #         output = self.gen_scanForInvalidTypes(output, -1, None)
         #
-        #         data = {}
-        #         outerDict["race" + str(i)] = data
-        #         data["laps"] = output
-        #         data["metaData"] = metaData
+        #         service = {}
+        #         outerDict["race" + str(i)] = service
+        #         service["laps"] = output
+        #         service["metaData"] = metaData
         #
         #     return outerDict
 
@@ -78,34 +78,34 @@ class Delta:
     #
     #     return finished + disq_disc
     #
-    # def delta_filterDrivers(self, data, beforeDrivers, afterDrivers):
+    # def delta_filterDrivers(self, service, beforeDrivers, afterDrivers):
     #     name = "Florian Niedermeier2"
     #
     #     if ((beforeDrivers or afterDrivers) == None) or ((beforeDrivers or afterDrivers) == 0):
-    #         return data
+    #         return service
     #
     #     foundIndex = 0
     #
     #     # searching current driver
-    #     for x in range(0, len(data), 1):
-    #         if data[x]["driver"] == name:
+    #     for x in range(0, len(service), 1):
+    #         if service[x]["driver"] == name:
     #             foundIndex = x
     #
     #     # check if "beforeDrivers" and "afterDrivers" args are valid
-    #     if beforeDrivers + 1 > data[foundIndex]["finish_position"] or afterDrivers > len(data) - 1:
-    #         return data
+    #     if beforeDrivers + 1 > service[foundIndex]["finish_position"] or afterDrivers > len(service) - 1:
+    #         return service
     #
     #     else:
     #
     #         foundData = []
     #
     #         for i in range(1, beforeDrivers + 1):
-    #             foundData.append(data[foundIndex - (beforeDrivers + 1) + i])
+    #             foundData.append(service[foundIndex - (beforeDrivers + 1) + i])
     #
-    #         foundData.append(data[foundIndex])
+    #         foundData.append(service[foundIndex])
     #
     #         for i in range(1, afterDrivers + 1):
-    #             foundData.append(data[foundIndex + i])
+    #             foundData.append(service[foundIndex + i])
     #
     #     return foundData
     #

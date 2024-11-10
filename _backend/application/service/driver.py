@@ -1,6 +1,4 @@
 import requests
-from _backend.application.sessionbuilder.session_builder import responseIsValid
-
 
 class Driver:
 
@@ -25,7 +23,7 @@ class Driver:
         if not responseIsValid(response):
             return {
                 "response": response,
-                "data": None
+                "service": None
             }
 
         responseLink = self.session.get(response.json()["link"])
@@ -37,12 +35,12 @@ class Driver:
             response.status_code = 400
             return {
                 "response": response,
-                "data": ""
+                "service": ""
             }
 
         return {
             "response": response,
-            "data": data["members"][0]["display_name"]
+            "service": data["members"][0]["display_name"]
         }
 
 

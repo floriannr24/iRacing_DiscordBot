@@ -1,38 +1,44 @@
-import statistics
-import numpy as np
-from _backend.application.data.laps_multi import requestLapsMulti
-from _backend.application.data.results_multi import requestResultsMulti
-from _backend.application.sessionbuilder.session_builder import responseIsValid
 import asyncio
-import requests
+from _backend.application.service.laps_multi import requestLapsMulti
+from _backend.application.service.recent_races import requestSubessionId
+from _backend.application.service.results_multi import requestResultsMulti
+from _backend.application.sessionbuilder.sessionmanager import SessionManager
+
 
 class Boxplot:
-    def __init__(self, session):
-        self.session = session
+    def __init__(self):
         self.iRacing_lapdata = None
         self.iRacing_results = None
 
-    def get_Boxplot_Data(self, subsession_id, userId):
+    async def get_Boxplot_Data(self, userId, **kwargs):
 
-        # get session application.data from iRacingAPI
-        response1 = requestLapsMulti(subsession_id, self.session)
-        response2 = requestResultsMulti(subsession_id, self.session)
+        selectedSession = kwargs.get('selectedSession', None)
+        subsessionId = kwargs.get('subsessionId', None)
 
-        # abort action if response is not 200
-        if not responseIsValid(response1["response"]):
-            return response1
+        # prioritize subsessionId when available, even if selectedSession is set
+        if not subsessionId:
+            subsessionId = await requestSubessionId(userId, selectedSession)
 
-        self.iRacing_lapdata = response1["data"]
-        self.iRacing_results = response2["data"]
+        async with SessionManager() as manager:
+            result1 = await  requestResultsMulti(subsessionId, manager)
+
+        async with SessionManager() as manager:
+            result2 = await requestLapsMulti(subsessionId, manager)
+
+        self.iRacing_results = result1
+        self.iRacing_lapdata = result2
 
         user_carclass = self.searchUsersCarClass(userId)
         unique_drivers = self.findUniqueDriversInCarclassOfUserDriver(user_carclass)
 
         dictionary = {
             "metadata": {
-                "subsession_id": subsession_id,
+                "subsession_id": subsessionId,
                 "laps": None,
                 "series_name": self.getSeriesName(),
+                "session_time": self.getSessionTime(),
+                "track": self.getSessionTrack(),
+                "sof": self.getSessionSof(),
                 "user_driver_id": userId,
                 "user_driver_name": self.getUserDriverName(userId)
             },
@@ -45,7 +51,7 @@ class Boxplot:
 
         return {
             "response": 200,
-            "data": dictionary
+            "service": dictionary
         }
 
     def searchUsersCarClass(self, id):
@@ -58,6 +64,10 @@ class Boxplot:
                 break
             else:
                 continue
+
+        if not carclassid:
+            raise Exception("Member_id not found in session. Possible member_id/session mismatch")
+
         return carclassid
 
     def sortDictionary(self, dictionary):
@@ -102,7 +112,9 @@ class Boxplot:
             "car_class_name": self.set_carClass(driver_id)["name"],
             "car_id": self.set_carId(driver_id),
             "personal_best": self.set_fastestPersonalLap(driver_id),
-            "fastest_lap": self.set_ifDriverSetFastestLapInSession(driver_id)
+            "fastest_lap": self.set_ifDriverSetFastestLapInSession(driver_id),
+            "irating": self.set_iRating(driver_id),
+            "license": None
         }
 
         return intDict
@@ -173,13 +185,7 @@ class Boxplot:
                 return data["finish_position_in_class"] + 1
 
     def addDriverInfo(self, unique_drivers):
-
-        driverArray = []
-
-        for driver in unique_drivers:
-            output = self.collectInfo(driver)
-            driverArray.append(output)
-
+        driverArray = [self.collectInfo(driver) for driver in unique_drivers]
         return driverArray
 
     def set_ifDriverSetFastestLapInSession(self, driver_id):
@@ -227,3 +233,27 @@ class Boxplot:
         for driver in self.iRacing_results["session_results"][2]["results"]:
             if driver["cust_id"] == id:
                 return driver["display_name"]
+
+    def getSessionTrack(self):
+        trackname = self.iRacing_results["track"]["track_name"]
+        trackConfig = self.iRacing_results["track"]["config_name"]
+
+        if trackConfig == "N/A":
+            track = f"{trackname}"
+        else:
+            track = f"{trackname} ({trackConfig})"
+
+        return track
+
+    def getSessionSof(self):
+        return self.iRacing_results["event_strength_of_field"]
+
+    def getSessionTime(self):
+        startTime = self.iRacing_results["start_time"]
+        startTimeFormatted = startTime.replace('T', ' ')[:-4] + " GMT"
+        return startTimeFormatted
+
+    def set_iRating(self, driver_id):
+        for data in self.iRacing_results["session_results"][0]["results"]:
+            if data["cust_id"] == driver_id:
+                return data["newi_rating"]
