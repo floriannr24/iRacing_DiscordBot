@@ -15,8 +15,6 @@ async def getBoxplotData(**kwargs):
     selectedSession = -1
     # subsessionId = 50881221
 
-    # 817387 -1 -> fastes laptime is 2nd -> ymin bugged
-
     responseData = await Boxplot().get_Boxplot_Data(userId=userId, selectedSession=selectedSession, subsessionId=subsessionId)
 
     # write_file_content(responseData)

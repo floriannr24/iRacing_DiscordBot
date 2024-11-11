@@ -59,7 +59,7 @@ class BoxplotDiagram(Diagram):
         self.boxplot = self.drawBoxplot()
 
         # format boxplot
-        yMin, yMax = self.calculateYMinMax(self.laps, self.runningLaps)
+        yMin, yMax = self.calculateYMinMax(self.runningLaps)
 
         self.limitYAxis(yMin, yMax)
         self.setYLabels(yMin, yMax)
@@ -230,9 +230,10 @@ class BoxplotDiagram(Diagram):
 
         plt.plot(x1, y1, zorder=3, linestyle="dashed", color="#C2C5CA")
 
-    def calculateYMinMax(self, laps, runningLaps):
-        fastestLaptime = self.boxplot["caps"][0].get_ydata()[0]
-        yMin = self.roundDown(fastestLaptime)
+    def calculateYMinMax(self, runningLaps):
+        capLaptimes = [cap.get_ydata()[0] for cap in self.boxplot["caps"]]
+        fastestLaptimeCap = min(capLaptimes)
+        yMin = self.roundDown(fastestLaptimeCap)
 
         allLaps = [item for sublist in runningLaps for item in sublist]
         topXpercentOfLaps = np.quantile(allLaps, 0.82) # top x% of laps (non disq/disc)
