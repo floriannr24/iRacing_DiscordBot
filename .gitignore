@@ -136,3 +136,4 @@ dist
 /_frontend/.vscode/
 /.idea/
 /_frontend/src/reference/
+/_api/bot.db
