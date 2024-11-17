@@ -1,0 +1,2 @@
+class PublicAppException(Exception):
+    pass

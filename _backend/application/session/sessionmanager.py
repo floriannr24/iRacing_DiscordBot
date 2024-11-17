@@ -5,10 +5,13 @@ import json
 import os
 import aiohttp
 
+from _backend.application.utils.publicappexception import PublicAppException
+
+
 class SessionManager:
     def __init__(self):
-        self.credentialLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/sessionbuilder/files/credentials.json"
-        self.cookiejarLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/sessionbuilder/files/cookie-jar.txt"
+        self.credentialLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/session/files/credentials.json"
+        self.cookiejarLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/session/files/cookie-jar.txt"
         self.credentials = self.getCredentials()
         self.cookie_jar = aiohttp.CookieJar()
         self.session = None
@@ -48,7 +51,6 @@ class SessionManager:
             self.loadCookies(self.cookie_jar, self.cookiejarLocation)
 
             if self.isCookieJarValid(self.cookie_jar):
-                print("[Sessionbuilder] Valid cookies found")
                 session = aiohttp.ClientSession(cookie_jar=self.cookie_jar)
             else:
                 session = aiohttp.ClientSession(cookie_jar=self.cookie_jar)
@@ -97,5 +99,13 @@ class SessionManager:
 
         return not invalid
 
-def responseIsValid(response):
-    return response.status_code == 200
+def handleServerException(response, json):
+    if response.status != 200:
+        if response.status == 404:
+            if json["message"]:
+                message = json["message"]
+            else:
+                message = json
+            raise PublicAppException(message)
+        else:
+            raise PublicAppException("iRacing API couldnt be reached. There may be maintenance work taking place at the moment.")

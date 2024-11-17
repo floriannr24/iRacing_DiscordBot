@@ -32,6 +32,7 @@ class BoxplotDiagram(Diagram):
         self.subsessionId = self.getSubsessionId(data)
 
         self.showRealName = kwargs.get('showRealName', None)
+        self.showLaptimes = kwargs.get('showLaptimes', None)
 
         # colors
         self.boxplot_facecolor = "#1A88FF"
@@ -66,18 +67,13 @@ class BoxplotDiagram(Diagram):
         self.setXLabels(self.driverNames)
         self.setTitleTexts()
 
-        # todo: parameterize
-        showLaptimes = False
-        showMedianLong = False
+        showLaptimes = self.showLaptimes
         showFakeName = not self.showRealName
 
         self.drawDISCDISQ()
 
         if (showLaptimes):
             self.drawLaptimes()
-
-        if (showMedianLong):
-            self.colorMedianLineFasterSlower(self.userDriverIndex)
 
         if (showFakeName):
             displayName = "----- Yourself ---->"
@@ -88,9 +84,6 @@ class BoxplotDiagram(Diagram):
 
         plt.tight_layout()
         plt.subplots_adjust(top=0.96-0.032*3.5)
-        # plt.subplots_adjust(left=0.105, right=0.97, top=0.84, bottom=0.33)
-
-        # plt.show()
 
         imagePath = self.getImagePath()
         plt.savefig(imagePath)
@@ -118,17 +111,6 @@ class BoxplotDiagram(Diagram):
         labelax2 = self.ax2.get_xticklabels()[index]
         labelax2.set_fontweight(1000)
         labelax2.set_color(self.text_highlight_color)
-
-    def colorMedianLineFasterSlower(self, index):
-        medianTimeOfUserdriver = self.boxplot["medians"][index].get_ydata()[0]
-        for median in self.boxplot["medians"]:
-            medianTime = median.get_ydata()[0]
-            if medianTime == medianTimeOfUserdriver:
-                continue
-            elif medianTime < medianTimeOfUserdriver:
-                median.set(color="#ff0000")
-            elif medianTime > medianTimeOfUserdriver:
-                median.set(color="#22ff1a")
 
     def getLaps(self, data):
         return [driver["laps"] for driver in data["service"]["drivers"]]

@@ -2,7 +2,8 @@ import asyncio
 from _backend.application.service.laps_multi import requestLapsMulti
 from _backend.application.service.recent_races import requestSubessionId
 from _backend.application.service.results_multi import requestResultsMulti
-from _backend.application.sessionbuilder.sessionmanager import SessionManager
+from _backend.application.session.sessionmanager import SessionManager
+from _backend.application.utils.publicappexception import PublicAppException
 
 
 class Boxplot:
@@ -66,7 +67,7 @@ class Boxplot:
                 continue
 
         if not carclassid:
-            raise Exception("Member_id not found in session. Possible member_id/session mismatch")
+            raise PublicAppException("'member_id' not found in session. Possible member_id/session mismatch")
 
         return carclassid
 

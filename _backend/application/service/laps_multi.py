@@ -3,16 +3,18 @@ import asyncio
 import aiohttp
 from Demos.security.sspi.socket_server import serve
 
-from _backend.application.sessionbuilder.sessionmanager import SessionManager
+from _backend.application.session.sessionmanager import SessionManager, handleServerException
 
 
 async def requestLapsMulti(subsession: int, manager: SessionManager):
-    # iRacingAPI
+
     async with manager.session.get('https://members-ng.iracing.com/data/results/lap_chart_data', params={"subsession_id": subsession, "simsession_number": "0"}) as response1:
         json = await response1.json()
+        handleServerException(response1, json)
         link = json["link"]
         async with manager.session.get(link) as response2:
             data = await response2.json()
+            handleServerException(response2, data)
             base_download_url = data["chunk_info"]["base_download_url"]
             chunk_file_names = data["chunk_info"]["chunk_file_names"]
 
@@ -26,4 +28,5 @@ async def requestLapsMulti(subsession: int, manager: SessionManager):
 async def requestChunkData(link: str, session):
     async with session.get(link) as response:
         json = await response.json()
+        handleServerException(response, json)
         return json
