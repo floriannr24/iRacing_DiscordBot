@@ -1,20 +1,19 @@
-
 from _backend.application.session.sessionmanager import SessionManager, handleServerException
 from _backend.application.utils.publicappexception import PublicAppException
 
 
-async def requestSubessionId(cust_id, selectedSession):
+async def requestSubessionId(cust_id, selectedSession, sessionManager: SessionManager):
 
     # getting index starting from the back of the list via arg "selectedSession".
     # SelectedSession is negative (-1 for the last race, -2 for the 2nd to last race etc.)
-    async with SessionManager() as manager:
-        async with manager.session.get('https://members-ng.iracing.com/data/stats/member_recent_races', params={'cust_id': cust_id}) as response:
-            json = await response.json()
-            handleServerException(response, json)
+    async with sessionManager as manager:
+        async with manager.session.get('https://members-ng.iracing.com/data/stats/member_recent_races', params={'cust_id': cust_id}) as response1:
+            json = await response1.json()
+            handleServerException(response1, json)
             link = json["link"]
-            async with manager.session.get(link) as response1:
-                data = await response1.json()
-                handleServerException(response, data)
+            async with manager.session.get(link) as response2:
+                data = await response2.json()
+                handleServerException(response2, data)
 
     index =  (-1) * selectedSession - 1
 

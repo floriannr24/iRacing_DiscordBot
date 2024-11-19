@@ -1,15 +1,19 @@
+import statistics
+
+from Tools.scripts.patchcheck import status
+
 from _backend.application.service.laps_multi import requestLapsMulti
 from _backend.application.service.results_multi import requestResultsMulti
 from _backend.application.session.sessionmanager import SessionManager
 from _backend.application.utils.publicappexception import PublicAppException
 
 
-class Boxplot:
+class Median:
     def __init__(self):
         self.iRacing_lapdata = None
         self.iRacing_results = None
 
-    async def get_Boxplot_Data(self, userId, subsessionId, sessionManager: SessionManager):
+    async def get_Median_Data(self, userId, subsessionId, sessionManager: SessionManager):
 
         self.iRacing_results = await requestResultsMulti(subsessionId, sessionManager)
         self.iRacing_lapdata = await requestLapsMulti(subsessionId, sessionManager)
@@ -88,19 +92,22 @@ class Boxplot:
 
         list_of_positions = self.list_of_positions(driver_id)
 
+        laps = self.set_laps(driver_id)
+
         intDict = {
             "name": driver_name,
             "id": driver_id,
             "finish_position_in_class": self.set_finishPositionInClass(driver_id),
             "result_status": self.set_resultStatus(driver_id),
             "laps_completed": self.set_lapsCompleted(list_of_positions),
-            "laps": self.set_laps(driver_id),
+            "laps": laps,
             "car_class_name": self.set_carClass(driver_id)["name"],
             "car_id": self.set_carId(driver_id),
             "personal_best": self.set_fastestPersonalLap(driver_id),
             "fastest_lap": self.set_ifDriverSetFastestLapInSession(driver_id),
             "irating": self.set_iRating(driver_id),
-            "license": None
+            "license": None,
+            "median": self.set_median(laps)
         }
 
         return intDict
@@ -243,3 +250,6 @@ class Boxplot:
         for data in self.iRacing_results["session_results"][0]["results"]:
             if data["cust_id"] == driver_id:
                 return data["newi_rating"]
+
+    def set_median(self, laps):
+        return statistics.median(laps)

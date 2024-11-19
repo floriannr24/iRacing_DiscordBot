@@ -86,7 +86,8 @@ class BoxplotDiagram(Diagram):
         plt.subplots_adjust(top=0.96-0.032*3.5)
 
         imagePath = self.getImagePath()
-        plt.savefig(imagePath)
+        # plt.savefig(imagePath)
+        plt.show()
         plt.close()
         return imagePath
 

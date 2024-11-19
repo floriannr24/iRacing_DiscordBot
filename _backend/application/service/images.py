@@ -3,7 +3,7 @@ import os
 import requests
 sessionBuilder = SessionBuilder()
 sessionBuilder.authenticate()
-session = sessionBuilder.session
+session = sessionBuilder.sessionManager
 
 
 def requestCarLogos(session):
