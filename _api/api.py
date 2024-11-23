@@ -1,4 +1,4 @@
-from Demos.win32ts_logoff_disconnected import session
+import asyncio
 
 from _api.apiDatabase import getSessionForUser, storeSessionForUser
 from _backend.application.dataprocessors.dataprocessor import Dataprocessor
@@ -46,7 +46,7 @@ async def getMedianData(**kwargs):
     showRealName = kwargs.get('showRealName', None)
     sessionManager: SessionManager = kwargs.get("sessionManager")
 
-    sessionManager.newSession()
+    # sessionManager.newSession()
 
     if not subsessionId:
         subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
@@ -55,12 +55,11 @@ async def getMedianData(**kwargs):
 
     if dataInDatabase:
         data = dataInDatabase
-        await sessionManager.session.close()
+        # await sessionManager.session.close()
     else:
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
-        saveSessionToDatabase(userId, subsessionId, data)
+        # saveSessionToDatabase(userId, subsessionId, data)
 
-    # boxplotData = read_file_content()
     fileLocation = MedianDiagram(data, showRealName=showRealName).draw()
     return fileLocation
 
@@ -70,4 +69,6 @@ def loadSessionFromDatabase(custId, sessionId):
 def saveSessionToDatabase(custId, sessionId, data):
     storeSessionForUser(custId, sessionId, data)
 
-# asyncio.run(getMedianData(userId=817320, selectedSession=-1))
+# asyncio.run(getMedianData(userId=817320, subsessionId=72802426))
+# asyncio.run(getMedianData(userId=817320, subsessionId=72801368))
+asyncio.run(getMedianData(userId=817320, subsessionId=72797931))

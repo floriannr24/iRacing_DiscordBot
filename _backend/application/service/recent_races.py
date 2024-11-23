@@ -19,7 +19,7 @@ async def requestSubessionId(cust_id, selectedSession, sessionManager: SessionMa
 
     listOfRaces = data["races"]
     if len(listOfRaces) <= index:
-        raise PublicAppException(f"Not enough races found for 'member_id'={cust_id} and 'selectedSession'= {selectedSession}. Number of races found: {len(listOfRaces)}")
+        raise PublicAppException(f"Not enough races found for 'member_id'={cust_id} and 'selectedSession'={selectedSession}. Number of races found: {len(listOfRaces)}")
 
     subsession_id = data["races"][index]["subsession_id"]
     return subsession_id

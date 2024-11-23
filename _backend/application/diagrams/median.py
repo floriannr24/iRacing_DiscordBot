@@ -7,6 +7,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from jupyter_client.connect import port_names
 from matplotlib import patches, pyplot
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
@@ -74,7 +75,6 @@ class MedianDiagram(Diagram):
         self.setXLabels(xMin, xMax)
         self.setYLabels(self.driverNames)
 
-        self.setTitleTexts()
         self.setGrid()
 
         self.colorNegativeDelta()
@@ -88,18 +88,20 @@ class MedianDiagram(Diagram):
             displayName = "----- Yourself ---->"
             self.replaceName(self.userDriverIndex, displayName)
 
-        self.highlightDrivername(self.userDriverIndex)
+        # self.highlightDrivername(self.userDriverIndex)
 
         plt.tight_layout()
         plt.subplots_adjust(top=0.96-0.022*5, right=0.82)
 
+        self.setColumnHeaders()
+
         imagePath = self.getImagePath()
-        plt.savefig(imagePath)
-        # plt.show()
+        # plt.savefig(imagePath)
+        plt.show()
         plt.close()
         return imagePath
 
-    def setTitleTexts(self):
+    def setColumnHeaders(self):
         locationSeriesName = 0.96
         space = 0.022
 
@@ -115,23 +117,34 @@ class MedianDiagram(Diagram):
         fontsize = 13
         fontweight = "medium"
         paddingFactor = 4.65
-        self.fig.text(0.12, locationSeriesName-space*paddingFactor, "Driver", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        self.fig.add_artist(patches.Rectangle((0, 0.85), 0.23, 0.03, facecolor=color2))
+        rectYPos = 0.85
+        rectHeight = 0.03
 
-        self.fig.text(0.26, locationSeriesName-space*paddingFactor, "Pos", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        self.fig.add_artist(patches.Rectangle((0.23, 0.85), 0.1, 0.03, facecolor=color1))
+        plot = self.ax1.get_position()
 
-        self.fig.text(0.405, locationSeriesName-space*paddingFactor, "Relative delta to personal median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        self.fig.add_artist(patches.Rectangle((0.33, 0.85), 0.491, 0.03, facecolor=color2))
+        print(plot)
 
-        self.fig.text(0.832, locationSeriesName-space*paddingFactor, "Delta", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        self.fig.add_artist(patches.Rectangle((0.821, 0.85), 0.08, 0.03, facecolor=color1))
+        Ax1PaddingToPlot = 27
+        Ax2PaddingToAx1 = 35
 
-        self.fig.text(0.91, locationSeriesName-space*paddingFactor, "Median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        self.fig.add_artist(patches.Rectangle((0.901, 0.85), 1, 0.03, facecolor=color2))
+        distDrivername = self.convertInchesToFigureCoords(Ax1PaddingToPlot + Ax2PaddingToAx1)
+        distPos = self.convertInchesToFigureCoords(Ax1PaddingToPlot)
+        deltaPos = self.convertInchesToFigureCoords(52)
 
+        self.fig.text(plot.x0 - distDrivername - 0.05, locationSeriesName-space * paddingFactor, "Driver", color=self.text_color, horizontalalignment="right", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((0, rectYPos), plot.x0-distDrivername, rectHeight, facecolor=color2))
 
+        self.fig.text(plot.x0 - distPos - 0.02, locationSeriesName-space * paddingFactor, "Pos", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((plot.x0-distDrivername, rectYPos), plot.x0-distPos, rectHeight, facecolor=color1))
 
+        self.fig.text(0.405, locationSeriesName-space * paddingFactor, "Relative delta to personal median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((plot.x0, rectYPos), plot.x1 - plot.x0, rectHeight, facecolor=color2))
+
+        self.fig.text(0.832, locationSeriesName-space * paddingFactor, "Delta", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((plot.x1, rectYPos), plot.x1 + deltaPos, rectHeight, facecolor=color1))
+
+        self.fig.text(0.91, locationSeriesName-space * paddingFactor, "Median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((plot.x1 + deltaPos, rectYPos), 1 - deltaPos, rectHeight, facecolor=color2))
 
     def userBoxplot_brightBlue(self, index):
         if not self.finishPositions[index] == "DISC" or not self.finishPositions[index] == "DISQ":
@@ -161,20 +174,6 @@ class MedianDiagram(Diagram):
         self.ax1.set_xticks(ticks)
         self.ax1.set_xticklabels(self.calculateSecondsStr(ticks), fontsize="large", color=self.text_color)
 
-        # self.ax6 = self.ax1.secondary_xaxis(location=1)
-        # ticks = np.arange(xmin, xmax + 0.5, 0.5)
-        # self.ax6.set_xticks(ticks)
-        # self.ax6.set_xticklabels(self.calculateSecondsStr(ticks), fontsize="large", color=self.text_color)
-
-        # self.ax2 = self.ax1.secondary_xaxis(location=1)
-        # ticks = np.arange(xmin, xmax + 0.5, 0.5)
-        # self.ax2.set_xticks(ticks)
-        # userMedianTime = self.medians[self.userDriverIndex]
-        # tickLabels = np.arange(userMedianTime + xmin, userMedianTime + xmax + 0.5, 0.5)
-        # tickLabels = [self.calculateLaptimeStr(x) for x in tickLabels]
-        # print(tickLabels)
-        # self.ax2.set_xticklabels(tickLabels, fontsize="11", color=self.text_color)
-
     def drawBarplot(self):
 
         xMedians = [0 if x == None else x for x in self.medianDeltas]
@@ -193,26 +192,27 @@ class MedianDiagram(Diagram):
 
     def setYLabels(self, driverNames):
 
-        paddingToAx1 = 27 # finish pos/
-        paddingToAx2 = 35 # name
-        AX4position = -370
-        paddingToAx4 = 60
+        Ax1PaddingToPlot = 27 # finish pos
+        Ax2PaddingToAx1 = 35 # name
 
         # finish positions
-        self.ax1.set_yticks([i for i in range(1, len(self.driverNames)+1)])
-        self.ax1.tick_params(axis="y", pad=paddingToAx1)
-        self.ax1.set_yticklabels(self.finishPositions, color=self.text_color, fontsize="11")
+        self.ax1.spines.left.set_position(('outward', Ax1PaddingToPlot))
+        self.ax1.spines['left'].set_visible(False)
+        self.ax1.tick_params(axis="y", size=0)
+        self.ax1.set_yticks([i for i in range(1, len(self.driverNames)+1)], self.finishPositions, color=self.text_color, fontsize="11")
 
         # driver names
         self.ax2 = self.ax1.secondary_yaxis(location=0)
-        self.ax2.set_yticks([i for i in range(1, len(self.driverNames)+1)])
-        self.ax2.tick_params(axis="y", pad=paddingToAx2 + paddingToAx1)
-        self.ax2.set_yticklabels(driverNames, ha="right", color=self.text_color, fontsize="11")
+        self.ax2.spines.left.set_position(('outward', Ax1PaddingToPlot + Ax2PaddingToAx1))
+        self.ax2.spines['left'].set_visible(False)
+        self.ax2.tick_params(axis="y", size=0)
+        self.ax2.set_yticks([i for i in range(1, len(self.driverNames)+1)], driverNames, ha="right", color=self.text_color, fontsize="11")
 
         # car logos
         self.ax3 = self.ax1.secondary_yaxis(location=0)
-        self.ax3.set_yticks([i for i in range(1, len(self.driverNames) + 1)])
-        self.ax3.set_yticklabels(["" for i in range(1, len(self.driverNames) + 1)])
+        self.ax3.spines['left'].set_visible(False)
+        self.ax3.set_yticks([i for i in range(1, len(self.driverNames) + 1)], ["" for i in range(1, len(self.driverNames) + 1)], color=self.text_color)
+        self.ax3.tick_params(axis="y", color=self.text_color)
         imgs = readCarLogoImages(self.carIds)
         for i, im in enumerate(imgs):
 
@@ -226,16 +226,18 @@ class MedianDiagram(Diagram):
             self.ax3.add_artist(ab)
 
         # relative deltas to median
-        self.ax4 = self.ax1.secondary_yaxis(location=0)
-        self.ax4.set_yticks([i for i in range(1, len(self.medianDeltas_str) + 1)])
-        self.ax4.tick_params(axis="y", pad=AX4position)
-        self.ax4.set_yticklabels(self.medianDeltas_str, ha="right", color=self.text_color, fontsize="11")
+        self.ax4 = self.ax1.secondary_yaxis(location=1)
+        self.ax4.spines['left'].set_visible(False)
+        self.ax4.spines.left.set_position(('outward', -52))
+        self.ax4.tick_params(axis="y", pad=47, size=0)
+        self.ax4.set_yticks([i for i in range(1, len(self.medianDeltas_str) + 1)], self.medianDeltas_str, color=self.text_color, fontsize="11", ha="right")
 
         # raw medians
-        self.ax5 = self.ax1.secondary_yaxis(location=0)
-        self.ax5.set_yticks([i for i in range(1, len(self.medians_str)+1)])
-        self.ax5.tick_params(axis="y", pad=AX4position-paddingToAx4)
-        self.ax5.set_yticklabels(self.medians_str, ha="right", color=self.text_color, fontsize="11")
+        self.ax5 = self.ax1.secondary_yaxis(location=1)
+        self.ax5.spines['left'].set_visible(False)
+        self.ax5.spines.left.set_position(('outward', -120))
+        self.ax5.tick_params(axis="y", pad=106, size=0)
+        self.ax5.set_yticks([i for i in range(1, len(self.medians_str)+1)], self.medians_str, ha="right", color=self.text_color, fontsize="11")
 
     def drawLaptimes(self):
         scatter = []
@@ -418,3 +420,12 @@ class MedianDiagram(Diagram):
                 value = ""
 
         return value
+
+    def setTitle(self):
+        pass
+
+    def convertInchesToFigureCoords(self, points):
+        fig_width_inches = self.fig.get_size_inches()[0]  # get figure width in inches
+        inches = points / 72
+        diff = inches / fig_width_inches
+        return diff
