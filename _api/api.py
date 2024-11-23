@@ -1,14 +1,11 @@
-import asyncio
+from Demos.win32ts_logoff_disconnected import session
 
-from cssselect import Selector
-from matplotlib.pyplot import boxplot
-
-from _backend.application.dataprocessors.boxplot import Boxplot
+from _api.apiDatabase import getSessionForUser, storeSessionForUser
+from _backend.application.dataprocessors.dataprocessor import Dataprocessor
 from _backend.application.diagrams.boxplot import BoxplotDiagram
 from _backend.application.diagrams.median import MedianDiagram
 from _backend.application.service.recent_races import requestSubessionId
 from _backend.application.session.sessionmanager import SessionManager
-from devutils.dev import read_file_content, write_file_content
 
 
 async def getBoxplotData(**kwargs):
@@ -20,15 +17,23 @@ async def getBoxplotData(**kwargs):
     showLaptimes = kwargs.get('showLaptimes', None)
     sessionManager: SessionManager = kwargs.get("sessionManager")
 
-    # sessionManager.newSession()
+    sessionManager.newSession()
 
-    # if not subsessionId:
-    #     subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
+    if not subsessionId:
+        subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
 
-    # boxplotData = await Boxplot().get_Boxplot_Data(userId, subsessionId, sessionManager)
+    dataInDatabase = loadSessionFromDatabase(userId, subsessionId)
+
+    if dataInDatabase:
+        data = dataInDatabase
+        await sessionManager.session.close()
+    else:
+        data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
+        saveSessionToDatabase(userId, subsessionId, data)
+
     # write_file_content(boxplotData)
-    boxplotData = read_file_content()
-    fileLocation = BoxplotDiagram(boxplotData, showRealName=showRealName, showLaptimes=showLaptimes).draw()
+    # data = read_file_content()
+    fileLocation = BoxplotDiagram(data, showRealName=showRealName, showLaptimes=showLaptimes).draw()
     return fileLocation
 
 async def getDeltaData(**kwargs):
@@ -39,17 +44,30 @@ async def getMedianData(**kwargs):
     subsessionId = kwargs.get('subsessionId', None)
     userId = kwargs.get('userId', None)
     showRealName = kwargs.get('showRealName', None)
-    showLaptimes = kwargs.get('showLaptimes', None)
     sessionManager: SessionManager = kwargs.get("sessionManager")
 
-    # sessionManager.newSession()
+    sessionManager.newSession()
 
-    # if not subsessionId:
-    #     subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
+    if not subsessionId:
+        subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
 
-    # boxplotData = await Boxplot().get_Boxplot_Data(userId, subsessionId, sessionManager)
-    boxplotData = read_file_content()
-    fileLocation = MedianDiagram(boxplotData, showRealName=showRealName, showLaptimes=showLaptimes).draw()
+    dataInDatabase = loadSessionFromDatabase(userId, subsessionId)
+
+    if dataInDatabase:
+        data = dataInDatabase
+        await sessionManager.session.close()
+    else:
+        data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
+        saveSessionToDatabase(userId, subsessionId, data)
+
+    # boxplotData = read_file_content()
+    fileLocation = MedianDiagram(data, showRealName=showRealName).draw()
     return fileLocation
 
-asyncio.run(getMedianData(userId=817320, selectedSession=-1))
+def loadSessionFromDatabase(custId, sessionId):
+    return getSessionForUser(custId, sessionId)
+
+def saveSessionToDatabase(custId, sessionId, data):
+    storeSessionForUser(custId, sessionId, data)
+
+# asyncio.run(getMedianData(userId=817320, selectedSession=-1))

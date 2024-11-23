@@ -15,7 +15,7 @@ class Diagram:
         self.ax_spines_color = "#41454C"
         self.ax_tick_color = "#8F979B"
         self.text_color = "#E9E9F0"
-        self.text_highlight_color = "#F3F3FA"
+        self.text_highlight_color = "white"
         # plt.rcParams['font.family'] = 'impact'
 
         self.ax1.set_facecolor(self.ax_color)

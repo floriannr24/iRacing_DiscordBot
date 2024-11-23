@@ -29,17 +29,15 @@ class MedianDiagram(Diagram):
         self.track = self.getTrack(data)
         self.sessionTime = self.getSessionTime(data)
         self.carIds = self.getCarIds(data)
-        self.runningLaps = self.getRunningLaps(data)
         self.subsessionId = self.getSubsessionId(data)
         self.medians = self.getMedian(data)
         self.medianDeltas = self.getMedianDelta(data, self.userDriverIndex) # x-Axis
         self.medianDeltaRunning = self.getMedianDeltaRunning(data, self.userDriverIndex)
 
-        self.medianDeltas_str = self.getMedianDeltaStr(self.medianDeltas) # 1st y-Axis right
-        self.medians_str = self.getMedianStr(data) # 2nd y-Axis right
+        self.medianDeltas_str = self.medianDeltasToString(data, self.userDriverIndex) # 1st y-Axis right
+        self.medians_str = self.mediansToString(self.medians) # 2nd y-Axis right
 
         self.showRealName = kwargs.get('showRealName', None)
-        self.showLaptimes = kwargs.get('showLaptimes', None)
 
         # colors
         self.boxplot_facecolor = "#1A88FF"
@@ -61,7 +59,7 @@ class MedianDiagram(Diagram):
         super().__init__(900, px_height)
 
     def getDriverNames(self, data):
-        return [driver["name"] for driver in data["service"]["drivers"]]
+        return [driver["name"] for driver in data["drivers"]]
 
     def draw(self):
 
@@ -90,14 +88,14 @@ class MedianDiagram(Diagram):
             displayName = "----- Yourself ---->"
             self.replaceName(self.userDriverIndex, displayName)
 
-        self.drivername_bold(self.userDriverIndex)
+        self.highlightDrivername(self.userDriverIndex)
 
         plt.tight_layout()
         plt.subplots_adjust(top=0.96-0.022*5, right=0.82)
 
         imagePath = self.getImagePath()
-        # plt.savefig(imagePath)
-        plt.show()
+        plt.savefig(imagePath)
+        # plt.show()
         plt.close()
         return imagePath
 
@@ -123,7 +121,7 @@ class MedianDiagram(Diagram):
         self.fig.text(0.26, locationSeriesName-space*paddingFactor, "Pos", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
         self.fig.add_artist(patches.Rectangle((0.23, 0.85), 0.1, 0.03, facecolor=color1))
 
-        self.fig.text(0.45, locationSeriesName-space*paddingFactor, "Relative delta to median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.text(0.405, locationSeriesName-space*paddingFactor, "Relative delta to personal median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
         self.fig.add_artist(patches.Rectangle((0.33, 0.85), 0.491, 0.03, facecolor=color2))
 
         self.fig.text(0.832, locationSeriesName-space*paddingFactor, "Delta", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
@@ -140,7 +138,7 @@ class MedianDiagram(Diagram):
             userBP = self.barplot["boxes"][index]
             userBP.set_facecolor(self.boxplot_user_facecolor)
 
-    def drivername_bold(self, index):
+    def highlightDrivername(self, index):
         labelax1 = self.ax1.get_yticklabels()[index]
         labelax1.set_fontweight(1000)
         labelax1.set_color(self.text_highlight_color)
@@ -149,12 +147,14 @@ class MedianDiagram(Diagram):
         labelax2.set_fontweight(1000)
         labelax2.set_color(self.text_highlight_color)
 
+        labelax5 = self.ax5.get_yticklabels()[index]
+        labelax5.set_color(self.text_highlight_color)
+
     def getLaps(self, data):
-        return [driver["laps"] for driver in data["service"]["drivers"]]
+        return [driver["laps"] for driver in data["drivers"]]
 
     def getMedian(self, data):
-        return [statistics.median(driver["laps"]) for driver in data["service"]["drivers"]]
-        # return [driver["median"] for driver in data["service"]["drivers"]]
+        return [driver["median"] for driver in data["drivers"]]
 
     def setXLabels(self, xmin, xmax):
         ticks = np.arange(xmin, xmax + 0.5, 0.5)
@@ -177,8 +177,10 @@ class MedianDiagram(Diagram):
 
     def drawBarplot(self):
 
+        xMedians = [0 if x == None else x for x in self.medianDeltas]
+
         barplot = self.ax1.barh(y=1+np.arange(len(self.driverNames)),
-                                width=self.medianDeltas,
+                                width=xMedians,
                                 zorder=2,
                                 height=0.7,
                                 )
@@ -282,6 +284,9 @@ class MedianDiagram(Diagram):
         largestNegativeDelta = min(medianDelta)
         xMin = self.roundDown(largestNegativeDelta)
 
+        if xMin >= -0.5:
+            xMin = xMin - 0.5
+
         largestPositiveDelta = max(medianDelta)
         xMax = self.roundUp(largestPositiveDelta)
 
@@ -297,33 +302,33 @@ class MedianDiagram(Diagram):
         return yticks
 
     def getSeriesName(self, data):
-        return data["service"]["metadata"]["series_name"]
+        return data["metadata"]["series_name"]
 
     def getFinishPositions(self, data):
-        return [driver["finish_position_in_class"] for driver in data["service"]["drivers"]]
+        return [driver["finish_position_in_class"] for driver in data["drivers"]]
 
     def getCarIds(self, data):
-        return [driver["car_id"] for driver in data["service"]["drivers"]]
+        return [driver["car_id"] for driver in data["drivers"]]
 
     def roundDown(self, delta):
         # round down to the next 0.5 step
         return math.floor(delta * 2) / 2
 
     def getUserDriverName(self, data):
-        return data["service"]["metadata"]["user_driver_name"]
+        return data["metadata"]["user_driver_name"]
 
     def getSof(self, data):
-        return data["service"]["metadata"]["sof"]
+        return data["metadata"]["sof"]
 
     def getTrack(self, data):
-        return data["service"]["metadata"]["track"]
+        return data["metadata"]["track"]
 
     def getSessionTime(self, data):
-        return data["service"]["metadata"]["session_time"]
+        return data["metadata"]["session_time"]
 
     def getRunningLaps(self, data):
         # all laps of drivers whose final status is not "Disqualified" or "Disconnected"
-        return [driver["laps"] for driver in data["service"]["drivers"] if driver["result_status"] == "Running"]
+        return [driver["laps"] for driver in data["drivers"] if driver["result_status"] == "Running"]
 
     def replaceName(self, index, displayName):
         labels = [item.get_text() for item in self.ax2.get_yticklabels()]
@@ -334,7 +339,7 @@ class MedianDiagram(Diagram):
         return driverNames.index(name)
 
     def getSubsessionId(self, data):
-        return data["service"]["metadata"]["subsession_id"]
+        return data["metadata"]["subsession_id"]
 
     def getImagePath(self):
         imagePath = Path().absolute().parent / 'images'
@@ -343,10 +348,9 @@ class MedianDiagram(Diagram):
         return location
 
     def getMedianDelta(self, data, userIndex):
-        medianDeltas = [statistics.median(driver["laps"]) for driver in data["service"]["drivers"]]
-        # medianDeltas = [driver["median"] for driver in data["service"]["drivers"]]
-        userMedianVal = medianDeltas[userIndex]
-        return [self.medianDeltaToUserDriver(x, userMedianVal) for x in medianDeltas]
+        medians = [0 if driver["median"] == None else driver["median"] for driver in data["drivers"]]
+        userMedianVal = medians[userIndex]
+        return [self.medianDeltaToUserDriver(x, userMedianVal) for x in medians]
 
     def medianDeltaToUserDriver(self, medianVal, userMedianVal):
         return round(medianVal-userMedianVal, 3)
@@ -362,9 +366,13 @@ class MedianDiagram(Diagram):
                 medianDelta.set_facecolor("green")
 
     def getMedianDeltaRunning(self, data, userIndex):
-        medianDeltas = [statistics.median(driver["laps"]) for driver in data["service"]["drivers"] if driver["result_status"] == "Running"]
-        # medianDeltas = [driver["median"] for driver in data["service"]["drivers"]]
-        userMedianVal = medianDeltas[userIndex]
+        medianDeltas = [driver["median"] for driver in data["drivers"] if driver["result_status"] == "Running"]
+
+        if userIndex > len(medianDeltas)-1:
+            userMedianVal = 0 # if userdriver has disq/disc
+        else:
+            userMedianVal = medianDeltas[userIndex]
+
         return [self.medianDeltaToUserDriver(x, userMedianVal) for x in medianDeltas]
 
     def roundUp(self, delta):
@@ -378,28 +386,35 @@ class MedianDiagram(Diagram):
     def limitYAxis(self):
         self.ax1.set(ylim=(len(self.driverNames)+0.7, 0.3))
 
-    def setTimetable(self):
+    def formatLaptime(self, medianLaptime):
+        if medianLaptime:
+            sec_rounded = round(medianLaptime, 3)
+            td_raw = str(timedelta(seconds=sec_rounded))
+            td_minutes = td_raw.split(":", 1)[1]
+            td_minutes = td_minutes[1:-3]
+            return td_minutes
+        else:
+            return "N/A"
 
-        timetable = plt.table(cellText=self.tableValues,
-                              rowLabels=None,
-                              alpha=1.0,
-                              loc='right')
+    def medianDeltasToString(self, data, userIndex):
+        medians = [driver["median"] for driver in data["drivers"]]
+        userMedianVal = medians[userIndex]
+        deltas = [None if x == None else self.medianDeltaToUserDriver(x, userMedianVal) for x in medians]
+        return [self.formatDelta(x) for x in deltas]
 
-        self.ax1.add_table(timetable)
+    def mediansToString(self, medians):
+        return [self.formatLaptime(x) for x in medians]
 
-    def calculateLaptimeStr(self, laptime):
-        sec_rounded = round(laptime, 3)
-        td_raw = str(timedelta(seconds=sec_rounded))
-        td_minutes = td_raw.split(":", 1)[1]
-        td_minutes = td_minutes[1:-3]
-        return td_minutes
+    def formatDelta(self, delta):
 
-    def getMedianDeltaStr(self, medianDelta):
-        deltas = [str(f"{x:.3f}") if x<0 else "+"+str(f"{x:.3f}") for x in medianDelta]
-        deltas = ["" if x=="+0.000" else x for x in deltas]
-        return deltas
+        if delta == None:
+            value = "N/A"
+        else:
+            if delta < 0:
+                value = "+" + str(f"{(-1)*delta:.3f}")
+            elif delta > 0:
+                value = "-" + str(f"{delta:.3f}")
+            else:
+                value = ""
 
-    def getMedianStr(self, data):
-        medians = [statistics.median(driver["laps"]) for driver in data["service"]["drivers"]]
-        # medianDeltas = [driver["median"] for driver in data["service"]["drivers"]]
-        return [self.calculateLaptimeStr(x) for x in medians]
+        return value

@@ -1,22 +1,25 @@
 import statistics
 
-from Tools.scripts.patchcheck import status
+from win32comext.mapi.mapitags import PR_ACL_DATA
 
 from _backend.application.service.laps_multi import requestLapsMulti
 from _backend.application.service.results_multi import requestResultsMulti
 from _backend.application.session.sessionmanager import SessionManager
-from _backend.application.utils.publicappexception import PublicAppException
+from _backend.application.utils.publicappexception import PublicAppException, PrivateAppException
 
 
-class Median:
+class Dataprocessor:
     def __init__(self):
         self.iRacing_lapdata = None
         self.iRacing_results = None
 
-    async def get_Median_Data(self, userId, subsessionId, sessionManager: SessionManager):
+    async def getData(self, userId, subsessionId, sessionManager: SessionManager):
 
         self.iRacing_results = await requestResultsMulti(subsessionId, sessionManager)
         self.iRacing_lapdata = await requestLapsMulti(subsessionId, sessionManager)
+
+        if not self.iRacing_results or not self.iRacing_lapdata:
+            raise PrivateAppException("'self.iRacing_results' or 'self.iRacing_lapdata' is null")
 
         user_carclass = self.searchUsersCarClass(userId)
         unique_drivers = self.findUniqueDriversInCarclassOfUserDriver(user_carclass)
@@ -39,10 +42,7 @@ class Median:
         dictionary = self.removePositionsForDiscDisq(dictionary)
         # dictionary = self.lapsOfCarclass(user_carclass, dictionary)
 
-        return {
-            "response": 200,
-            "service": dictionary
-        }
+        return dictionary
 
     def searchUsersCarClass(self, id):
 
@@ -91,7 +91,6 @@ class Median:
         driver_name = driver[1]
 
         list_of_positions = self.list_of_positions(driver_id)
-
         laps = self.set_laps(driver_id)
 
         intDict = {
@@ -107,7 +106,7 @@ class Median:
             "fastest_lap": self.set_ifDriverSetFastestLapInSession(driver_id),
             "irating": self.set_iRating(driver_id),
             "license": None,
-            "median": self.set_median(laps)
+            "median": self.set_median(laps),
         }
 
         return intDict
@@ -252,4 +251,7 @@ class Median:
                 return data["newi_rating"]
 
     def set_median(self, laps):
-        return statistics.median(laps)
+        if laps:
+            return statistics.median(laps)
+        else:
+            return None

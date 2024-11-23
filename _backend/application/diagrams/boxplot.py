@@ -53,7 +53,7 @@ class BoxplotDiagram(Diagram):
         super().__init__(px_width, 700)
 
     def getDriverNames(self, data):
-        return [driver["name"] for driver in data["service"]["drivers"]]
+        return [driver["name"] for driver in data["drivers"]]
 
     def draw(self):
 
@@ -86,8 +86,8 @@ class BoxplotDiagram(Diagram):
         plt.subplots_adjust(top=0.96-0.032*3.5)
 
         imagePath = self.getImagePath()
-        # plt.savefig(imagePath)
-        plt.show()
+        plt.savefig(imagePath)
+        # plt.show()
         plt.close()
         return imagePath
 
@@ -114,7 +114,7 @@ class BoxplotDiagram(Diagram):
         labelax2.set_color(self.text_highlight_color)
 
     def getLaps(self, data):
-        return [driver["laps"] for driver in data["service"]["drivers"]]
+        return [driver["laps"] for driver in data["drivers"]]
 
     def setYLabels(self, ymin, ymax):
         number_of_seconds_shown = np.arange(ymin, ymax + 0.5, 0.5)
@@ -246,33 +246,33 @@ class BoxplotDiagram(Diagram):
         return yticks
 
     def getSeriesName(self, data):
-        return data["service"]["metadata"]["series_name"]
+        return data["metadata"]["series_name"]
 
     def getFinishPositions(self, data):
-        return [driver["finish_position_in_class"] for driver in data["service"]["drivers"]]
+        return [driver["finish_position_in_class"] for driver in data["drivers"]]
 
     def getCarIds(self, data):
-        return [driver["car_id"] for driver in data["service"]["drivers"]]
+        return [driver["car_id"] for driver in data["drivers"]]
 
     def roundDown(self, laptime):
         # round down to the next 0.5 step
         return math.floor(laptime * 2) / 2
 
     def getUserDriverName(self, data):
-        return data["service"]["metadata"]["user_driver_name"]
+        return data["metadata"]["user_driver_name"]
 
     def getSof(self, data):
-        return data["service"]["metadata"]["sof"]
+        return data["metadata"]["sof"]
 
     def getTrack(self, data):
-        return data["service"]["metadata"]["track"]
+        return data["metadata"]["track"]
 
     def getSessionTime(self, data):
-        return data["service"]["metadata"]["session_time"]
+        return data["metadata"]["session_time"]
 
     def getRunningLaps(self, data):
         # all laps of drivers whose final status is not "Disqualified" or "Disconnected"
-        return [driver["laps"] for driver in data["service"]["drivers"] if driver["result_status"] == "Running"]
+        return [driver["laps"] for driver in data["drivers"] if driver["result_status"] == "Running"]
 
     def replaceName(self, index, displayName):
         labels = [item.get_text() for item in self.ax2.get_xticklabels()]
@@ -283,7 +283,7 @@ class BoxplotDiagram(Diagram):
         return driverNames.index(name)
 
     def getSubsessionId(self, data):
-        return data["service"]["metadata"]["subsession_id"]
+        return data["metadata"]["subsession_id"]
 
     def getImagePath(self):
         imagePath = Path().absolute().parent / 'images'
