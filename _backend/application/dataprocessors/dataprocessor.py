@@ -19,7 +19,7 @@ class Dataprocessor:
         self.iRacing_lapdata = await requestLapsMulti(subsessionId, sessionManager)
 
         if not self.iRacing_results or not self.iRacing_lapdata:
-            raise PrivateAppException("'self.iRacing_results' or 'self.iRacing_lapdata' is null")
+            raise RuntimeError("'self.iRacing_results' or 'self.iRacing_lapdata' is null")
 
         user_carclass = self.searchUsersCarClass(userId)
         unique_drivers = self.findUniqueDriversInCarclassOfUserDriver(user_carclass)
