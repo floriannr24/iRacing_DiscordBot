@@ -88,7 +88,7 @@ class MedianDiagram(Diagram):
             displayName = "----- Yourself ---->"
             self.replaceName(self.userDriverIndex, displayName)
 
-        # self.highlightDrivername(self.userDriverIndex)
+        self.highlightDrivername(self.userDriverIndex)
 
         plt.tight_layout()
         plt.subplots_adjust(top=0.96-0.022*5, right=0.82)
@@ -96,8 +96,8 @@ class MedianDiagram(Diagram):
         self.setColumnHeaders()
 
         imagePath = self.getImagePath()
-        # plt.savefig(imagePath)
-        plt.show()
+        plt.savefig(imagePath)
+        # plt.show()
         plt.close()
         return imagePath
 
@@ -122,8 +122,6 @@ class MedianDiagram(Diagram):
 
         plot = self.ax1.get_position()
 
-        print(plot)
-
         Ax1PaddingToPlot = 27
         Ax2PaddingToAx1 = 35
 
@@ -137,7 +135,7 @@ class MedianDiagram(Diagram):
         self.fig.text(plot.x0 - distPos - 0.02, locationSeriesName-space * paddingFactor, "Pos", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
         self.fig.add_artist(patches.Rectangle((plot.x0-distDrivername, rectYPos), plot.x0-distPos, rectHeight, facecolor=color1))
 
-        self.fig.text(0.405, locationSeriesName-space * paddingFactor, "Relative delta to personal median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.text(0.405, locationSeriesName-space * paddingFactor, "Personal median relative delta", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
         self.fig.add_artist(patches.Rectangle((plot.x0, rectYPos), plot.x1 - plot.x0, rectHeight, facecolor=color2))
 
         self.fig.text(0.832, locationSeriesName-space * paddingFactor, "Delta", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
@@ -295,11 +293,16 @@ class MedianDiagram(Diagram):
         return xMin, xMax
 
     def calculateSecondsStr(self, number_of_seconds_shown):
-
         yticks = []
+
         for sec in number_of_seconds_shown:
-            sec_rounded = str(round(sec, 2)) + "s"
-            yticks.append(sec_rounded)
+            if sec > 0:
+                value = str((-1)*round(sec, 2)) + "s"
+            elif sec < 0:
+                value = "+" + str((-1)*round(sec, 2)) + "s"
+            else:
+                value = str(round(sec, 2)) + "s"
+            yticks.append(value)
 
         return yticks
 
@@ -401,6 +404,10 @@ class MedianDiagram(Diagram):
     def medianDeltasToString(self, data, userIndex):
         medians = [driver["median"] for driver in data["drivers"]]
         userMedianVal = medians[userIndex]
+
+        if userMedianVal == None:
+            userMedianVal = 0
+
         deltas = [None if x == None else self.medianDeltaToUserDriver(x, userMedianVal) for x in medians]
         return [self.formatDelta(x) for x in deltas]
 

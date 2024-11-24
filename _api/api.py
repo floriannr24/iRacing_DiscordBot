@@ -46,7 +46,7 @@ async def getMedianData(**kwargs):
     showRealName = kwargs.get('showRealName', None)
     sessionManager: SessionManager = kwargs.get("sessionManager")
 
-    # sessionManager.newSession()
+    sessionManager.newSession()
 
     if not subsessionId:
         subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
@@ -55,10 +55,10 @@ async def getMedianData(**kwargs):
 
     if dataInDatabase:
         data = dataInDatabase
-        # await sessionManager.session.close()
+        await sessionManager.session.close()
     else:
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
-        # saveSessionToDatabase(userId, subsessionId, data)
+        saveSessionToDatabase(userId, subsessionId, data)
 
     fileLocation = MedianDiagram(data, showRealName=showRealName).draw()
     return fileLocation
@@ -71,4 +71,6 @@ def saveSessionToDatabase(custId, sessionId, data):
 
 # asyncio.run(getMedianData(userId=817320, subsessionId=72802426))
 # asyncio.run(getMedianData(userId=817320, subsessionId=72801368))
-asyncio.run(getMedianData(userId=817320, subsessionId=72797931))
+# asyncio.run(getMedianData(userId=817320, subsessionId=72797931))
+# asyncio.run(getMedianData(userId=817320, subsessionId=72777447)) #rework
+# asyncio.run(getMedianData(userId=817320, subsessionId=72779496)) #rework
