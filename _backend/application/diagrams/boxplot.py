@@ -1,5 +1,4 @@
 import math
-import os.path
 import statistics
 import uuid
 from datetime import timedelta
@@ -286,7 +285,7 @@ class BoxplotDiagram(Diagram):
         return data["metadata"]["subsession_id"]
 
     def getImagePath(self):
-        imagePath = Path().absolute().parent / 'images'
+        imagePath = Path().absolute().parent / 'output'
         figureName = f"boxplot_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location

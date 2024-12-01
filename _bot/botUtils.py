@@ -2,7 +2,7 @@ import asyncio
 from enum import Enum
 import discord
 
-from _api.api import getMedianData, getBoxplotData
+from _api.api import getMedianImage, getBoxplotImage, getDeltaImage
 from _api.apiDatabase import storeNewMemberId, updateMemberId
 from _backend.application.session.sessionmanager import SessionManager
 
@@ -47,15 +47,14 @@ async def createBoxplotImage(memberIdToUse, selected_session, show_real_name, su
     sessionManager = SessionManager()
     sessionManager.cookie_jar = cookieJar
 
-    imagefileLocation = await asyncio.wait_for(getBoxplotData(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id,
-                       showRealName=show_real_name, showLaptimes=show_laptimes, sessionManager=sessionManager), 20)
+    imagefileLocation = await asyncio.wait_for(getBoxplotImage(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id,
+                                                               showRealName=show_real_name, showLaptimes=show_laptimes, sessionManager=sessionManager), 20)
     file = discord.File(imagefileLocation)
     return file
 
 async def postMessage(file, interaction, status):
     if status == MemberIdStatus.FIRST_ID or status == MemberIdStatus.EXISTS_ALREADY_ID or status == MemberIdStatus.REFRESH_ID:
-        await interaction.followup.send(file=file,
-                                        content="⚠️ Hint: The bot will now remember your entered member_id. You don't have to provide it anymore.")
+        await interaction.followup.send(file=file, content="⚠️ Hint: The bot will now remember your entered member_id. You don't have to provide it anymore.")
     else:
         await interaction.followup.send(file=file)
 
@@ -72,11 +71,18 @@ class MemberIdStatus(Enum):
     EXISTS_ALREADY_ID = 4       # member_id provided, member_id == memberId from db -> use from db
     REFRESH_ID = 5              # member_id provided, member_id != memberId from db -> replace old memberId with new member_id
 
-
 async def createMedianImage(memberIdToUse, selected_session, show_real_name, subsession_id, cookieJar):
     sessionManager = SessionManager()
     sessionManager.cookie_jar = cookieJar
 
-    imagefileLocation = await asyncio.wait_for(getMedianData(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id, showRealName=show_real_name, sessionManager=sessionManager), 20)
+    imagefileLocation = await asyncio.wait_for(getMedianImage(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id, showRealName=show_real_name, sessionManager=sessionManager), 20)
+    file = discord.File(imagefileLocation)
+    return file
+
+async def createDeltaImage(memberIdToUse, selected_session, show_real_name, subsession_id, cookieJar):
+    sessionManager = SessionManager()
+    sessionManager.cookie_jar = cookieJar
+
+    imagefileLocation = await asyncio.wait_for(getDeltaImage(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id, showRealName=show_real_name, sessionManager=sessionManager), 20)
     file = discord.File(imagefileLocation)
     return file

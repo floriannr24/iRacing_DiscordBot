@@ -29,8 +29,10 @@ class Dataprocessor:
                 "subsession_id": subsessionId,
                 "laps": None,
                 "series_name": self.getSeriesName(),
+                "series_id": self.getSeriesId(),
+                "track": self.getTrackName(),
+                "track_id": self.getTrackId(),
                 "session_time": self.getSessionTime(),
-                "track": self.getSessionTrack(),
                 "sof": self.getSessionSof(),
                 "user_driver_id": userId,
                 "user_driver_name": self.getUserDriverName(userId)
@@ -40,7 +42,6 @@ class Dataprocessor:
 
         dictionary = self.sortDictionary(dictionary)
         dictionary = self.removePositionsForDiscDisq(dictionary)
-        # dictionary = self.lapsOfCarclass(user_carclass, dictionary)
 
         return dictionary
 
@@ -207,12 +208,6 @@ class Dataprocessor:
                     if record["incident"] == False and record["personal_best_lap"] == True:
                         return self.convertTimeformatToSeconds(lap_time)
 
-    # dont delete, maybe needed for delta plot
-    def lapsOfCarclass(self, cclass, dict):
-        for driver in dict["drivers"]:
-            if driver["car_class_id"] == cclass and driver["finish_position_in_class"] == 1:
-                return len(driver["laps"])
-
     def getSeriesName(self):
         return self.iRacing_results["series_name"]
 
@@ -226,7 +221,7 @@ class Dataprocessor:
             if driver["cust_id"] == id:
                 return driver["display_name"]
 
-    def getSessionTrack(self):
+    def getTrackName(self):
         trackname = self.iRacing_results["track"]["track_name"]
         trackConfig = self.iRacing_results["track"]["config_name"]
 
@@ -255,3 +250,9 @@ class Dataprocessor:
             return statistics.median(laps)
         else:
             return None
+
+    def getSeriesId(self):
+        return self.iRacing_results["series_id"]
+
+    def getTrackId(self):
+        return self.iRacing_results["track"]["track_id"]

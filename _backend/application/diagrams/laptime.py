@@ -1,30 +1,34 @@
 import math
 import statistics
 import uuid
+from array import array
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
+
 import numpy as np
-from matplotlib import pyplot as plt
+from jinja2.filters import prepare_select_or_reject
+from matplotlib import pyplot as plt, patches
 
 from _backend.application.diagrams.diagram import Diagram
 
-class DeltaDiagram(Diagram):
+# ToDo: select only a handful of players for comparison
+
+class LaptimeDiagram(Diagram):
     def __init__(self, originalData, **kwargs):
         self.simplePlot = None
 
-        self.showRealName = kwargs.get('showRealName', False)
-        self.showDiscDisq = kwargs.get('showDiscDisq', False)
-        self.referenceMode = kwargs.get('referenceMode', ReferenceMode.WINNER)
-        self.selectionMode = kwargs.get('selectionMode', SelectionMode.FIVE)
+        self.showRealName = kwargs.get('showRealName', None)
+        self.showDiscDisq = kwargs.get('showDiscDisq', None)
+        self.displayMode = kwargs.get('displayMode', None)
 
         self.showDiscDisq = False
-        self.referenceMode = ReferenceMode.WINNER
-        self.selectionMode = SelectionMode.ALL
+        self.displayMode = DisplayMode.ME_NINE
 
         # data
         self.userDriverName = self.getUserDriverName(originalData)
-        self.data = self.prepareData(originalData, self.showDiscDisq, self.referenceMode, self.selectionMode)
+        self.data = self.prepareData(originalData, self.showDiscDisq, self.displayMode)
+        self.median = self.getMedian(originalData)
         self.numberOflaps = self.getNumberOfLaps(self.data)
         self.finishPositions = self.getFinishPositions(originalData)
         self.driverNames = self.getDriverNames(self.data)
@@ -37,22 +41,23 @@ class DeltaDiagram(Diagram):
         self.subsessionId = self.getSubsessionId(originalData)
 
         # colors
-        self.boxplot_facecolor = "#1A88FF"
+        self.boxplot_facecolor = "#1C77BD"
         self.boxplot_user_facecolor = "#BFDDFF"
         self.boxplot_line_color = "#000000"
         self.lap_color = "yellow"
         self.lap_edge_color = "#808000"
         self.boxplot_flier_color = "#000000"
 
-        widthPerLap = 65
+        numberOfDrivers = len(self.driverNames)
+        heightPerDriver = 35
 
-        # about 50px per lap
-        if self.numberOflaps < 5:
-            px_width = widthPerLap * 5
+        # about 50px per single boxplot
+        if numberOfDrivers < 12:
+            px_height = heightPerDriver * 13
         else:
-            px_width = widthPerLap * self.numberOflaps
+            px_height = heightPerDriver * numberOfDrivers
 
-        super().__init__(px_width, 900)
+        super().__init__(900, px_height)
 
     def getDriverNames(self, data):
         return [driver["name"] for driver in data["drivers"]]
@@ -61,7 +66,9 @@ class DeltaDiagram(Diagram):
         values = []
 
         for i in numberOfSecondsShown:
-            if i <= 0:
+            if i < 0:
+                val = str(i) + "s"
+            elif i == 0:
                 val = str(i) + "s"
             else:
                 val = "+" + str(i) + "s"
@@ -69,41 +76,42 @@ class DeltaDiagram(Diagram):
 
         return values
 
+
     def draw(self):
 
         self.simplePlot = self.drawPlot()
 
-        # format boxplot
+        # format plot
         yMin, yMax = self.calculateXMinMax()
 
-        self.limitYAxis(yMax, yMin)
-        self.limitXAxis()
+        self.limitYAxis(yMin, yMax)
+        # self.limitXAxis()
 
-        self.setYLabels(yMin, yMax)
-        self.setXLabels()
+        # self.setYLabels(yMin, yMax)
+        # self.setXLabels()
 
-        self.setGrid()
+        # self.setGrid()
 
         # self.colorNegativeDelta()
         # self.colorPositiveDelta()
 
         # showFakeName = not self.showRealName
 
-        if self.showDiscDisq:
-            self.colorDiscDisq()
+        # if self.showDiscDisq:
+        #     self.colorDiscDisq()
 
         # if (showFakeName):
         #     displayName = "----- Yourself ---->"
         #     self.replaceName(self.userDriverIndex, displayName)
 
-        self.highlightUsername(self.userDriverIndex)
+        # self.highlightUsername(self.userDriverIndex)
+        self.colorAllLines()
         self.highlightUserLine(self.userDriverIndex)
-        self.colorDrivernames()
 
         plt.tight_layout()
-        plt.subplots_adjust(top=0.96 - 0.022 * 4)
+        plt.subplots_adjust(top=0.96 - 0.022 * 5)
 
-        self.setColumnHeaders()
+        # self.setColumnHeaders()
 
         imagePath = self.getImagePath()
         # plt.savefig(imagePath)
@@ -111,27 +119,18 @@ class DeltaDiagram(Diagram):
         plt.close()
         return imagePath
 
-    def getMaxYPosition(self):
-        ypos = []
-        for data in self.simplePlot:
-            yDataArray = data.get_data()[1]
-            if len(yDataArray) == self.numberOflaps:
-                pass
-
-
-            lastValidDelta = np.where(~np.isnan(yDataArray))[0]
-            ypos.append(yDataArray[lastValidDelta][-1])
-        return ypos
-
     def setColumnHeaders(self):
         locationSeriesName = 0.96
         space = 0.022
 
         # session desc
-        self.fig.text(0.5, locationSeriesName, self.seriesName, fontsize=16, fontweight="1000", color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesName, self.seriesName, fontsize=16, fontweight="1000", color=self.text_color,
+                      horizontalalignment="center")
         self.fig.text(0.5, locationSeriesName - space, self.track, color=self.text_color, horizontalalignment="center")
-        self.fig.text(0.5, locationSeriesName - space * 2, f"{self.sessionTime} | SOF: {self.sof}", color=self.text_color, horizontalalignment="center")
-        self.fig.text(0.5, locationSeriesName - space * 3, f"ID: {self.subsessionId}", color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesName - space * 2, f"{self.sessionTime} | SOF: {self.sof}",
+                      color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesName - space * 3, f"ID: {self.subsessionId}", color=self.text_color,
+                      horizontalalignment="center")
 
         # data columns desc
         color1 = "#41454C"
@@ -142,36 +141,36 @@ class DeltaDiagram(Diagram):
         rectYPos = 0.85
         rectHeight = 0.03
 
-        # plot = self.ax1.get_position()
-        #
-        # Ax1PaddingToPlot = 27
-        # Ax2PaddingToAx1 = 35
-        #
-        # distDrivername = self.convertInchesToFigureCoords(Ax1PaddingToPlot + Ax2PaddingToAx1)
-        # distPos = self.convertInchesToFigureCoords(Ax1PaddingToPlot)
-        # deltaPos = self.convertInchesToFigureCoords(52)
-        #
-        # self.fig.text(plot.x0 - distDrivername - 0.05, locationSeriesName - space * paddingFactor, "Driver",
-        #               color=self.text_color, horizontalalignment="right", fontsize=fontsize, fontweight=fontweight)
-        # self.fig.add_artist(patches.Rectangle((0, rectYPos), plot.x0 - distDrivername, rectHeight, facecolor=color2))
-        #
-        # self.fig.text(plot.x0 - distPos - 0.02, locationSeriesName - space * paddingFactor, "Pos",
-        #               color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        # self.fig.add_artist(
-        #     patches.Rectangle((plot.x0 - distDrivername, rectYPos), plot.x0 - distPos, rectHeight, facecolor=color1))
-        #
-        # self.fig.text(0.405, locationSeriesName - space * paddingFactor, "Personal median relative delta",
-        #               color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        # self.fig.add_artist(patches.Rectangle((plot.x0, rectYPos), plot.x1 - plot.x0, rectHeight, facecolor=color2))
-        #
-        # self.fig.text(0.832, locationSeriesName - space * paddingFactor, "Delta", color=self.text_color,
-        #               horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        # self.fig.add_artist(patches.Rectangle((plot.x1, rectYPos), plot.x1 + deltaPos, rectHeight, facecolor=color1))
-        #
-        # self.fig.text(0.91, locationSeriesName - space * paddingFactor, "Median", color=self.text_color,
-        #               horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
-        # self.fig.add_artist(
-        #     patches.Rectangle((plot.x1 + deltaPos, rectYPos), 1 - deltaPos, rectHeight, facecolor=color2))
+        plot = self.ax1.get_position()
+
+        Ax1PaddingToPlot = 27
+        Ax2PaddingToAx1 = 35
+
+        distDrivername = self.convertInchesToFigureCoords(Ax1PaddingToPlot + Ax2PaddingToAx1)
+        distPos = self.convertInchesToFigureCoords(Ax1PaddingToPlot)
+        deltaPos = self.convertInchesToFigureCoords(52)
+
+        self.fig.text(plot.x0 - distDrivername - 0.05, locationSeriesName - space * paddingFactor, "Driver",
+                      color=self.text_color, horizontalalignment="right", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((0, rectYPos), plot.x0 - distDrivername, rectHeight, facecolor=color2))
+
+        self.fig.text(plot.x0 - distPos - 0.02, locationSeriesName - space * paddingFactor, "Pos",
+                      color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(
+            patches.Rectangle((plot.x0 - distDrivername, rectYPos), plot.x0 - distPos, rectHeight, facecolor=color1))
+
+        self.fig.text(0.405, locationSeriesName - space * paddingFactor, "Personal median relative delta",
+                      color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((plot.x0, rectYPos), plot.x1 - plot.x0, rectHeight, facecolor=color2))
+
+        self.fig.text(0.832, locationSeriesName - space * paddingFactor, "Delta", color=self.text_color,
+                      horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(patches.Rectangle((plot.x1, rectYPos), plot.x1 + deltaPos, rectHeight, facecolor=color1))
+
+        self.fig.text(0.91, locationSeriesName - space * paddingFactor, "Median", color=self.text_color,
+                      horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
+        self.fig.add_artist(
+            patches.Rectangle((plot.x1 + deltaPos, rectYPos), 1 - deltaPos, rectHeight, facecolor=color2))
 
     def userBoxplot_brightBlue(self, index):
         if not self.finishPositions[index] == "DISC" or not self.finishPositions[index] == "DISQ":
@@ -201,11 +200,9 @@ class DeltaDiagram(Diagram):
         self.ax1.set_xticklabels(np.arange(1, self.numberOflaps+1), fontsize="large", color=self.text_color)
 
     def drawPlot(self):
+        laptimes = np.array([driver["laps"] for driver in self.data["drivers"]])
 
-        deltas = np.array([driver["deltaToSpecified"] for driver in self.data["drivers"]])
-
-        simplePlot = self.ax1.plot(deltas.T)
-        plt.gca().invert_yaxis()
+        simplePlot = self.ax1.plot(laptimes.T)
         return simplePlot
 
     def limitYAxis(self, ymin, ymax):
@@ -231,9 +228,7 @@ class DeltaDiagram(Diagram):
         # self.ax2.spines.left.set_position(('outward', Ax1PaddingToPlot + Ax2PaddingToAx1))
         self.ax2.spines['left'].set_visible(False)
         self.ax2.tick_params(axis="y", size=0)
-        # maxYPosition = self.getMaxYPosition()
-        driverNameYPositions = np.linspace(0, yMax, len(self.driverNames))
-        self.ax2.set_yticks(driverNameYPositions, self.driverNames, ha="left", color=self.text_color, fontsize="11")
+        self.ax2.set_yticks(range(0, len(self.driverNames)), self.driverNames, ha="left", color=self.text_color, fontsize="11")
 
         # # car logos
         # self.ax3 = self.ax1.secondary_yaxis(location=0)
@@ -313,19 +308,15 @@ class DeltaDiagram(Diagram):
 
     def calculateXMinMax(self):
 
-        deltasAllLaps = np.array([driver["deltaToSpecified"] for driver in self.data["drivers"]]).flatten()
-        deltasAllLaps = deltasAllLaps[~np.isnan(deltasAllLaps)]
+        lapsWithoutFirstLap = np.array([driver["laps"][1:] for driver in self.data["drivers"]]).flatten()
 
-        largestNegativeDelta = min(deltasAllLaps)
-        yMin = self.roundDown(largestNegativeDelta)
+        lowestLaptime = min(lapsWithoutFirstLap)
+        yMin = self.roundDown(lowestLaptime)
 
-        deltasLastLap = np.array([driver["deltaToSpecified"][self.numberOflaps-1] for driver in self.data["drivers"]])
-        deltasLastLap = deltasLastLap[~np.isnan(deltasLastLap)]
+        highestLaptime = max(lapsWithoutFirstLap)
+        yMax = self.roundUp(highestLaptime)
 
-        yMax = np.quantile(deltasAllLaps, 0.9)
-        # yMax = self.roundUp(topXPercent)
-
-        return int(yMin), int(yMax)
+        return int(yMin), int(yMax-10)
 
     def calculateSecondsStr(self, number_of_seconds_shown):
         yticks = []
@@ -352,7 +343,7 @@ class DeltaDiagram(Diagram):
 
     def roundDown(self, delta):
         # round down to the next 0.5 step and subtract 5
-        return math.floor(delta * 2) / 2 - 1
+        return math.floor(delta * 2) / 2
 
     def getUserDriverName(self, data):
         return data["metadata"]["user_driver_name"]
@@ -473,37 +464,37 @@ class DeltaDiagram(Diagram):
         diff = inches / fig_width_inches
         return diff
 
-    def prepareData(self, data, showDiscDisq, referenceMode, selectionMode):
+    def prepareData(self, dataOrig, showDiscDisq, displayMode):
 
         if showDiscDisq:
-            drivers = [driver for driver in data["drivers"]]
+            drivers = [driver for driver in dataOrig["drivers"]]
         else:
-            drivers = [driver for driver in data["drivers"] if driver["result_status"] == "Running"]
+            drivers = [driver for driver in dataOrig["drivers"] if driver["result_status"] == "Running"]
 
         driverIndex = [driver["name"] for driver in drivers].index(self.userDriverName)
 
-        if referenceMode == ReferenceMode.WINNER:
-            targetLaps = drivers[0]["laps"]
-            if not selectionMode == SelectionMode.ALL:
-                drivers = [drivers[0]] + self.getDriverSubset(drivers, driverIndex, selectionMode.value) # always show winner-driver
-        elif referenceMode == ReferenceMode.ME:
-            targetLaps = drivers[driverIndex]["laps"]
-            if not selectionMode == SelectionMode.ALL:
-                drivers = self.getDriverSubset(drivers, driverIndex, selectionMode.value)
+        if displayMode == DisplayMode.ALL:
+            drivers = drivers
+        elif displayMode == DisplayMode.ME_FIVE:
+            drivers = self.getDriverSubset(drivers, driverIndex, DisplayMode.ME_FIVE)
+        elif displayMode == DisplayMode.ME_NINE:
+            drivers = self.getDriverSubset(drivers, driverIndex, DisplayMode.ME_NINE)
         else:
-            targetLaps = drivers[0]["laps"]
             drivers = drivers
 
+        numberOfLaps = len(dataOrig["drivers"][0]["laps"])
 
         for driver in drivers:
-            delta = np.cumsum(np.array(driver["laps"]) - np.array(targetLaps[:len(driver["laps"])]))
-            delta = np.pad(delta, (0, len(targetLaps) - len(driver["laps"])), mode='constant', constant_values=None)
-            delta = np.ndarray.tolist(delta)
-            driver["deltaToSpecified"] = delta
+            laps = np.pad(driver["laps"], (0, numberOfLaps - len(driver["laps"])), mode='constant', constant_values=None)
+            laps = np.ndarray.tolist(laps)
+            driver["laps"] = laps
 
-        data["drivers"] = drivers
+        dataPrepared = {
+            "metadata": dataOrig["metadata"],
+            "drivers": drivers
+        }
 
-        return data
+        return dataPrepared
 
     def removeDiscDisq(self):
 
@@ -517,18 +508,15 @@ class DeltaDiagram(Diagram):
             box = self.simplePlot[driverIndex]
             box.set_color("#6F6F6F")
 
-    def getDriverSubset(self, drivers, userDriverIndex, numberOfDrivers):
-        indexToShow = (numberOfDrivers - 1) / 2
-
-        if userDriverIndex >= 3:
-            min = int(userDriverIndex - indexToShow)
-        else:
-            min = 1
-
-        max = int(userDriverIndex + indexToShow)
-        subset = drivers[min:max + 1]
-        return subset
-
+    def getDriverSubset(self, drivers, driverIndex, displayMode):
+        if displayMode == DisplayMode.ME_FIVE:
+            min = driverIndex - 2
+            max = driverIndex + 2
+            return drivers[min:max + 1] # upper bound exclusive
+        if displayMode == DisplayMode.ME_NINE:
+            min = driverIndex - 4
+            max = driverIndex + 4
+            return drivers[min:max + 1]
 
     def highlightUserLine(self, userDriverIndex):
         userLine = self.simplePlot[userDriverIndex]
@@ -536,18 +524,92 @@ class DeltaDiagram(Diagram):
         userLine.set_linewidth(2)
         userLine.set(zorder=10)
 
-    def colorDrivernames(self):
-        for i, line in enumerate(self.simplePlot):
-            color = line.get_c()
-            label = self.ax2.get_yticklabels()[i]
-            label.set_color(color)
+    def colorAllLines(self):
+        for line in self.simplePlot:
+            line.set_color(self.boxplot_facecolor)
 
-class ReferenceMode(Enum):
-    WINNER = 1
-    ME = 2
 
-class SelectionMode(Enum):
-    ALL = -1
-    FIVE = 5
-    SEVEN = 7
-    NINE = 9
+#     # set line color
+#     colorList_top3 = ["#FFD900", "#CFCEC9", "#D4822A"]
+#     colorList_rest = ['#1f77b4', '#2ca02c', '#A3E6A3', '#d62728', '#811818', '#8261FF', '#8c564b', '#e377c2',
+#                       '#919191', '#CFCF4B', '#97ED27', '#17becf']
+#
+#     self.ax.set_prop_cycle("color", colorList_rest)
+#
+#     # split list into "top3" and "rest"
+#     top3, rest = self.splitDataTop3(self.input)
+#     top3.reverse()
+#
+#     # draw plots
+#     counter = 2
+#     for i in range(0, len(top3), 1):
+#         data = top3[i]["delta"]
+#         self.ax.plot(data, color=colorList_top3[counter])
+#         counter = counter-1
+#
+#     for i in range(0, len(rest), 1):
+#         self.ax.plot(rest[i]["delta"])
+#
+#     # formatting
+#     steps = 5
+#     bottom_border = self.calculateYMin()
+#     y_ticklabels = self.createYTickLabels(list(np.arange(0, bottom_border, steps)))
+#
+#     self.ax.set(xlim=(-0.5, self.number_of_laps - 0.5), ylim=(-5, bottom_border))
+#     self.ax.set_xticks(np.arange(0, self.number_of_laps))
+#     self.ax.set_xlabel("Laps", color="white")
+#     self.ax.set_yticks(np.arange(0, bottom_border, steps))
+#     self.ax.set_yticklabels(y_ticklabels)
+#     self.ax.set_ylabel("Cumulative gap to leader in seconds", color="white")
+#     self.ax.legend(self.extractDrivers(), loc="center left", facecolor="#36393F", labelcolor="white",
+#                    bbox_to_anchor=(1.05, 0.5), labelspacing=0.5, edgecolor="#7D8A93")
+#     # ax.set_title("Race report", pad="20.0", color="white")
+#     self.ax.invert_yaxis()
+#     plt.tick_params(labelright=True)
+#
+#     plt.tight_layout()
+#     plt._showMenu()
+#
+# def calculateYMin(self):
+#     deltaAtEnd = []
+#
+#     for lapdata in self.input:
+#         indexLastLap = len(lapdata["delta"]) - 1
+#         deltaAtEnd.append(lapdata["delta"][indexLastLap])
+#     return 5 * round(statistics.median(deltaAtEnd) * 1.5 / 5)
+#
+# def extractDrivers(self):
+#     return [lapdata["driver"] for lapdata in self.input]
+#
+# def createYTickLabels(self, list):
+#     for i, x in enumerate(list, 0):
+#         if not i % 2 == 0:
+#             list[i] = ""
+#     return list
+#
+# def splitDataTop3(self, laps):
+#
+#     top3 = []
+#     rest = []
+#
+#     for data in laps:
+#         if data["finish_position"] <= 3:
+#             top3.append(data)
+#         else:
+#             rest.append(data)
+#
+#     return top3, rest
+#
+# def unpackConfig(self):
+#     pass
+
+class DisplayMode(Enum):
+    ALL = 1,
+    ME_FIVE = 2,
+    ME_NINE = 3,
+
+
+
+
+
+

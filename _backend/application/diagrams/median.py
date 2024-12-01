@@ -1,5 +1,4 @@
 import math
-import os.path
 import statistics
 import uuid
 from datetime import timedelta
@@ -7,8 +6,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from jupyter_client.connect import port_names
-from matplotlib import patches, pyplot
+from matplotlib import patches
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 from _backend.application.diagrams.diagram import Diagram
@@ -262,7 +260,6 @@ class MedianDiagram(Diagram):
             box = self.barplot[driverIndex]
             box.set_facecolor("#6F6F6F")
 
-
     def draw_medianLine(self):
 
         x1 = None
@@ -347,7 +344,7 @@ class MedianDiagram(Diagram):
         return data["metadata"]["subsession_id"]
 
     def getImagePath(self):
-        imagePath = Path().absolute().parent / 'images'
+        imagePath = Path().absolute().parent / 'output'
         figureName = f"boxplot_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location
