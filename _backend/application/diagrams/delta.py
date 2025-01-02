@@ -10,31 +10,28 @@ from matplotlib import pyplot as plt
 from _backend.application.diagrams.diagram import Diagram
 
 class DeltaDiagram(Diagram):
-    def __init__(self, originalData, **kwargs):
-        self.simplePlot = None
+    def __init__(self, originalData, params):
 
-        self.showRealName = kwargs.get('showRealName', False)
-        self.showDiscDisq = kwargs.get('showDiscDisq', False)
-        self.referenceMode = kwargs.get('referenceMode', ReferenceMode.WINNER)
-        self.selectionMode = kwargs.get('selectionMode', SelectionMode.FIVE)
-
-        self.showDiscDisq = False
-        self.referenceMode = ReferenceMode.WINNER
-        self.selectionMode = SelectionMode.ALL
+        # settings
+        self.showRealName = params.get('show_real_name', None)
+        self.showDiscDisq = params.get('show_discdisq', None)
+        self.referenceMode = params.get('reference', ReferenceMode.WINNER)
+        self.selectionMode = params.get('selection', SelectionMode.ALL)
 
         # data
         self.userDriverName = self.getUserDriverName(originalData)
-        self.data = self.prepareData(originalData, self.showDiscDisq, self.referenceMode, self.selectionMode)
-        self.numberOflaps = self.getNumberOfLaps(self.data)
         self.finishPositions = self.getFinishPositions(originalData)
-        self.driverNames = self.getDriverNames(self.data)
-        self.userDriverIndex = self.getUserDriverIndex(self.driverNames, self.userDriverName)
         self.seriesName = self.getSeriesName(originalData)
         self.sof = self.getSof(originalData)
         self.track = self.getTrack(originalData)
         self.sessionTime = self.getSessionTime(originalData)
         self.carIds = self.getCarIds(originalData)
         self.subsessionId = self.getSubsessionId(originalData)
+        self.data = self.prepareData(originalData, self.showDiscDisq, self.referenceMode, self.selectionMode)
+        self.numberOflaps = self.getNumberOfLaps(self.data)
+        self.driverNames = self.getDriverNames(self.data)
+        self.userDriverIndex = self.getUserDriverIndex(self.driverNames, self.userDriverName)
+        self.isRainySession = self.getRainInfo(self.data)
 
         # colors
         self.boxplot_facecolor = "#1A88FF"
@@ -44,15 +41,9 @@ class DeltaDiagram(Diagram):
         self.lap_edge_color = "#808000"
         self.boxplot_flier_color = "#000000"
 
-        widthPerLap = 65
-
-        # about 50px per lap
-        if self.numberOflaps < 5:
-            px_width = widthPerLap * 5
-        else:
-            px_width = widthPerLap * self.numberOflaps
-
-        super().__init__(px_width, 900)
+        self.px_height = 900
+        self.px_width = self.calcPxWidth()
+        super().__init__(self.px_width, self.px_height)
 
     def getDriverNames(self, data):
         return [driver["name"] for driver in data["drivers"]]
@@ -117,7 +108,6 @@ class DeltaDiagram(Diagram):
             yDataArray = data.get_data()[1]
             if len(yDataArray) == self.numberOflaps:
                 pass
-
 
             lastValidDelta = np.where(~np.isnan(yDataArray))[0]
             ypos.append(yDataArray[lastValidDelta][-1])
@@ -541,6 +531,20 @@ class DeltaDiagram(Diagram):
             color = line.get_c()
             label = self.ax2.get_yticklabels()[i]
             label.set_color(color)
+
+    def getRainInfo(self, data):
+        return data["metadata"]["is_rainy_session"]
+
+    def calcPxWidth(self):
+        widthPerLap = 65
+
+        if self.numberOflaps < 10:
+           px_width = widthPerLap * 10
+        else:
+            px_width = widthPerLap * self.numberOflaps
+
+        return px_width
+
 
 class ReferenceMode(Enum):
     WINNER = 1

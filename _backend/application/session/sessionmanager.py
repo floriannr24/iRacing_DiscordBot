@@ -1,6 +1,8 @@
 import hashlib
 import base64
 import json
+from datetime import datetime
+
 import aiohttp
 
 from _backend.application.utils.publicappexception import PublicAppException
@@ -11,7 +13,6 @@ class SessionManager:
         self.credentialLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/session/files/credentials.json"
         self.cookiejarLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/session/files/cookie-jar.txt"
         self.credentials = self.getCredentials()
-        self.cookie_jar = None
         self.session = None
 
     def getCredentials(self):
@@ -24,16 +25,10 @@ class SessionManager:
         hashInBase64 = base64.b64encode(initialHash).decode('utf-8')
         return hashInBase64
 
-    def newSession(self):
-        self.session = aiohttp.ClientSession(cookie_jar=self.cookie_jar)
+    def newSession(self, cookie):
+        self.session = aiohttp.ClientSession(cookie_jar=cookie)
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        return self
-
-    async def authenticate(self):
+    async def authenticate(self) -> aiohttp.CookieJar:
         loginAdress = "https://members-ng.iracing.com/auth"
         loginHeaders = {"Content-Type": "application/json"}
         authBody = {"email": self.credentials["email"], "password": self.encode_pw()}
@@ -46,18 +41,33 @@ class SessionManager:
         async with session as s:
             async with s.post(loginAdress, json=authBody, headers=loginHeaders) as response:
                 if not response.status == 200:
-                    raise Exception(f"[Sessionbuilder] API call unsuccessful, status code is {response.status}")
+                    raise Exception(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Authentication call unsuccessful, status code is {response.status}")
                 else:
-                    print("[Sessionbuilder] Authenticated")
+                    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Authenticated")
                     return cookie_jar
 
-def handleServerException(response, json):
+
+def getMessage404(json):
+    if json["message"]:
+        message = json["message"]
+    else:
+        message = json
+    return message
+
+def getMessage400(json):
+    if json["message"]:
+        message = json["message"]
+    else:
+        message = json
+    return message
+
+def checkForBadServerResponse(response, json):
     if response.status != 200:
         if response.status == 404:
-            if json["message"]:
-                message = json["message"]
-            else:
-                message = json
+            message = getMessage404(json)
+            raise PublicAppException(message)
+        if response.status == 400:
+            message = getMessage400(json)
             raise PublicAppException(message)
         else:
-            raise PublicAppException("iRacing API couldnt be reached. There may be maintenance work taking place at the moment.")
+            raise PublicAppException("iRacing API couldn't be reached. There may be maintenance work taking place at the moment.")

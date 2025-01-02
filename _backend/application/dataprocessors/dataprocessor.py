@@ -1,12 +1,9 @@
+import asyncio
 import statistics
-
-from win32comext.mapi.mapitags import PR_ACL_DATA
-
 from _backend.application.service.laps_multi import requestLapsMulti
 from _backend.application.service.results_multi import requestResultsMulti
 from _backend.application.session.sessionmanager import SessionManager
 from _backend.application.utils.publicappexception import PublicAppException
-
 
 class Dataprocessor:
     def __init__(self):
@@ -15,8 +12,18 @@ class Dataprocessor:
 
     async def getData(self, userId, subsessionId, sessionManager: SessionManager):
 
-        self.iRacing_results = await requestResultsMulti(subsessionId, sessionManager)
-        self.iRacing_lapdata = await requestLapsMulti(subsessionId, sessionManager)
+        try:
+            self.iRacing_results = await requestResultsMulti(subsessionId, sessionManager)
+            self.iRacing_lapdata = await requestLapsMulti(subsessionId, sessionManager)
+        except PublicAppException as e:
+            await sessionManager.session.close()
+            raise PublicAppException(e.args[0])
+        except Exception as e:
+            await sessionManager.session.close()
+            raise RuntimeError()
+
+        # better session.close behavior?
+        # session.close for timeout?
 
         if not self.iRacing_results or not self.iRacing_lapdata:
             raise RuntimeError("'self.iRacing_results' or 'self.iRacing_lapdata' is null")
@@ -35,19 +42,23 @@ class Dataprocessor:
                 "session_time": self.getSessionTime(),
                 "sof": self.getSessionSof(),
                 "user_driver_id": userId,
-                "user_driver_name": self.getUserDriverName(userId)
+                "user_driver_name": self.getUserDriverName(userId),
+                "is_rainy_session": self.getRainInfo()
             },
             "drivers": self.addDriverInfo(unique_drivers)
         }
 
-        dictionary = self.sortDictionary(dictionary)
-        dictionary = self.removePositionsForDiscDisq(dictionary)
+        self.sortDictionary(dictionary)
+        self.setPositionLabels(dictionary)
 
         return dictionary
 
     def searchUsersCarClass(self, id):
 
         carclassid = None
+
+        if len(self.iRacing_results["session_results"]) <= 1:
+            raise PublicAppException("Selected session is a practice session. Only race sessions are supported.")
 
         for results in self.iRacing_results["session_results"][2]["results"]:
             if results["cust_id"] == id:
@@ -57,20 +68,23 @@ class Dataprocessor:
                 continue
 
         if not carclassid:
-            raise PublicAppException("'member_id' not found in session. Possible member_id/session mismatch")
+            raise PublicAppException("Couldn't find your member_id in the given session.")
 
         return carclassid
 
     def sortDictionary(self, dictionary):
-        secondarySort = list(sorted(dictionary["drivers"],
-                                    key=lambda p: p["finish_position_in_class"]))  # secondary sort by key "finish_position"
 
-        primarySort = list(sorted(secondarySort, key=lambda p: p["laps_completed"],
-                                  reverse=True))  # primary sort by key "laps_completed", descending
+        # running drivers
+        driversRunning = [driver for driver in dictionary["drivers"] if driver["result_status"] == "Running"]
+        secondarySortRunning = list(sorted(driversRunning, key=lambda p: p["finish_position_in_class"]))  # secondary sort by key "finish_position"
+        primarySortRunning = list(sorted(secondarySortRunning, key=lambda p: p["laps_completed"], reverse=True))  # primary sort by key "laps_completed", descending
 
-        dictionary["drivers"] = primarySort
+        # disc/disq drivers
+        driversDiscDisq = [driver for driver in dictionary["drivers"] if driver["result_status"] != "Running"]
+        secondarySortDiscDisq = list(sorted(driversDiscDisq, key=lambda p: p["finish_position_in_class"]))  # secondary sort by key "finish_position"
+        primarySortDiscDisq = list(sorted(secondarySortDiscDisq, key=lambda p: p["laps_completed"], reverse=True))  # primary sort by key "laps_completed", descending
 
-        return dictionary
+        dictionary["drivers"] = primarySortRunning + primarySortDiscDisq
 
     def findUniqueDriversInCarclassOfUserDriver(self, user_carclass):
         unique_drivers = set()
@@ -149,18 +163,6 @@ class Dataprocessor:
 
         return laps
 
-    def removePositionsForDiscDisq(self, dictionary):
-
-        for driver in dictionary["drivers"]:
-            if driver["result_status"] == "Disconnected":
-                driver["finish_position"] = 'DISC'
-                driver["finish_position_in_class"] = 'DISC'
-            if driver["result_status"] == "Disqualified":
-                driver["finish_position"] = 'DISQ'
-                driver["finish_position_in_class"] = 'DISQ'
-
-        return dictionary
-
     def set_carClass(self, driver_id):
 
         carClass = {}
@@ -175,7 +177,10 @@ class Dataprocessor:
     def set_finishPositionInClass(self, driver_id):
         for data in self.iRacing_results["session_results"][2]["results"]:
             if data["cust_id"] == driver_id:
-                return data["finish_position_in_class"] + 1
+                if data["reason_out"] == "Running":
+                    return data["finish_position_in_class"] + 1
+                else:
+                    return -1
 
     def addDriverInfo(self, unique_drivers):
         driverArray = [self.collectInfo(driver) for driver in unique_drivers]
@@ -256,3 +261,21 @@ class Dataprocessor:
 
     def getTrackId(self):
         return self.iRacing_results["track"]["track_id"]
+
+    def getRainInfo(self):
+        return self.iRacing_results["session_results"][0]["weather_result"]["precip_time_pct"] > 0
+
+    def setPositionLabels(self, dictionary):
+        driversRunning = [driver for driver in dictionary["drivers"] if driver["result_status"] == "Running"]
+        for i, driver in enumerate(driversRunning):
+            driver["finish_position_in_class"] = i + 1
+
+        driversDiscDisq = [driver for driver in dictionary["drivers"] if driver["result_status"] != "Running"]
+        for driver in driversDiscDisq:
+            if driver["result_status"] == "Disconnected":
+                driver["finish_position_in_class"] = 'DISC'
+            if driver["result_status"] == "Disqualified":
+                driver["finish_position_in_class"] = 'DISQ'
+
+
+

@@ -7,31 +7,38 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.ticker import FuncFormatter
+from skimage.transform import resize
 
 from _backend.application.diagrams.diagram import Diagram
-from _backend.application.diagrams.images.imageSrc import readCarLogoImages
+from _backend.application.diagrams.images.imageLoader import readCarLogoImages, readSeriesLogoImage
 
 
 class BoxplotDiagram(Diagram):
-    def __init__(self, data, **kwargs):
-        self.boxplot = None
+    def __init__(self, originalData, params):
+
+        # settings
+        self.maxSeconds = params.get('max_seconds', None)
+        self.showFakeName = not params.get('show_real_name', None)
+        self.showLaptimes = params.get('show_laptimes', None)
+        self.showDiscDisq = params.get('show_discdisq', None)
 
         # data
-        self.laps = self.getLaps(data)
-        self.finishPositions = self.getFinishPositions(data)
-        self.driverNames = self.getDriverNames(data)
-        self.userDriverName = self.getUserDriverName(data)
+        self.data = self.prepareData(originalData, self.showDiscDisq)
+        self.laps = self.getLaps(self.data)
+        self.finishPositions = self.getFinishPositions(self.data)
+        self.driverNames = self.getDriverNames(self.data)
+        self.userDriverName = self.getUserDriverName(self.data)
         self.userDriverIndex = self.getUserDriverIndex(self.driverNames, self.userDriverName)
-        self.seriesName = self.getSeriesName(data)
-        self.sof =  self.getSof(data)
-        self.track = self.getTrack(data)
-        self.sessionTime = self.getSessionTime(data)
-        self.carIds = self.getCarIds(data)
-        self.runningLaps = self.getRunningLaps(data)
-        self.subsessionId = self.getSubsessionId(data)
-
-        self.showRealName = kwargs.get('showRealName', None)
-        self.showLaptimes = kwargs.get('showLaptimes', None)
+        self.seriesName = self.getSeriesName(self.data)
+        self.seriesId = self.getSeriesId(self.data)
+        self.sof =  self.getSof(self.data)
+        self.track = self.getTrack(self.data)
+        self.sessionTime = self.getSessionTime(self.data)
+        self.carIds = self.getCarIds(self.data)
+        self.runningLaps = self.getRunningLaps(self.data)
+        self.subsessionId = self.getSubsessionId(self.data)
+        self.isRainySession = self.getRainInfo(self.data)
 
         # colors
         self.boxplot_facecolor = "#1A88FF"
@@ -41,18 +48,9 @@ class BoxplotDiagram(Diagram):
         self.lap_edge_color = "#808000"
         self.boxplot_flier_color = "#000000"
 
-        numberOfDrivers = len(self.driverNames)
-
-        # about 50px per single boxplot
-        if numberOfDrivers < 12:
-            px_width = 50 * 13
-        else:
-            px_width = 50 * numberOfDrivers
-
-        super().__init__(px_width, 700)
-
-    def getDriverNames(self, data):
-        return [driver["name"] for driver in data["drivers"]]
+        self.px_height = 700
+        self.px_width = self.calcPxWidth(self.driverNames)
+        super().__init__(self.px_width, self.px_height)
 
     def draw(self):
 
@@ -61,34 +59,68 @@ class BoxplotDiagram(Diagram):
         # format boxplot
         yMin, yMax = self.calculateYMinMax(self.runningLaps)
 
+        if self.maxSeconds:
+            yMax = abs(self.maxSeconds)
+
         self.limitYAxis(yMin, yMax)
-        self.setYLabels(yMin, yMax)
+
+        self.setYLabels()
         self.setXLabels(self.driverNames)
-        self.setTitleTexts()
 
-        showLaptimes = self.showLaptimes
-        showFakeName = not self.showRealName
-
-        self.drawDISCDISQ()
-
-        if (showLaptimes):
+        if self.showLaptimes:
             self.drawLaptimes()
 
-        if (showFakeName):
+        if self.showFakeName:
             displayName = "----- Yourself ---->"
             self.replaceName(self.userDriverIndex, displayName)
 
         self.drivername_bold(self.userDriverIndex)
         self.userBoxplot_brightBlue(self.userDriverIndex)
+        
+        self.colorDISCDISQ()
 
         plt.tight_layout()
-        plt.subplots_adjust(top=0.96-0.032*3.5)
+        plt.subplots_adjust(top=1-self.convertPixelsToFigureCoords(128))
+
+        self.setHeaderText()
+        self.setHeaderImages()
 
         imagePath = self.getImagePath()
         plt.savefig(imagePath)
         # plt.show()
         plt.close()
         return imagePath
+
+    def calcPxWidth(self, driverNames):
+        numberOfDrivers = len(driverNames)
+
+        # about 50px per single boxplot
+        if numberOfDrivers < 12:
+            px_width = 50 * 13
+        else:
+            px_width = 50 * numberOfDrivers
+        return px_width
+
+    def getDriverNames(self, data):
+        return [driver["name"] for driver in data["drivers"]]
+
+    def setHeaderImages(self):
+
+        # series
+        seriesImg = readSeriesLogoImage(self.seriesId)
+        resizeFactor = 0.35
+        seriesImg = resize(seriesImg, (int(seriesImg.shape[0] * resizeFactor), int(seriesImg.shape[1] * resizeFactor)),
+                           anti_aliasing=True)
+
+        imageHeight = seriesImg.shape[0]
+        top0Position = self.px_height - imageHeight
+        spaceForMiddle = (126 - imageHeight) / 2
+        top = top0Position - spaceForMiddle
+
+        self.fig.figimage(seriesImg, xo=20, yo=top, zorder=3)
+
+    def convertPixelsToFigureCoords(self, pixels):
+        return pixels / self.px_height
 
     def setTitleTexts(self):
         locationSeriesName = 0.96
@@ -115,10 +147,30 @@ class BoxplotDiagram(Diagram):
     def getLaps(self, data):
         return [driver["laps"] for driver in data["drivers"]]
 
-    def setYLabels(self, ymin, ymax):
-        number_of_seconds_shown = np.arange(ymin, ymax + 0.5, 0.5)
-        self.ax1.set_yticks(number_of_seconds_shown)
-        self.ax1.set_yticklabels(self.calculateMinutesYAxis(number_of_seconds_shown), fontsize="large", color=self.text_color)
+    def setYLabels(self):
+        self.ax1.yaxis.set_major_locator(plt.MaxNLocator(nbins=12, steps=[1, 2, 2.5, 5, 10]))
+        formatter = FuncFormatter(self.formatCustomTickLabels)
+        self.ax1.yaxis.set_major_formatter(formatter)
+        self.ax1.tick_params(labelsize='large', labelcolor=self.text_color)
+
+    def formatCustomTickLabels(self, value, pos):
+        sec_rounded = round(value, 2)
+        minutesAndSeconds = str(timedelta(seconds=sec_rounded))
+        minutesAndSecondsClean = minutesAndSeconds.split(":", 1)[1]
+
+        # .5 without tick labels
+        if ".5" in minutesAndSecondsClean:
+            labelWithDecimal = ""
+        else:
+            labelWithDecimal = minutesAndSecondsClean + ".0"
+
+        # special case: time >= 10 minutes
+        if labelWithDecimal[:1] == '0':
+            label = labelWithDecimal[1:]
+        else:
+            label = labelWithDecimal
+
+        return label
 
     def drawBoxplot(self):
 
@@ -184,7 +236,7 @@ class BoxplotDiagram(Diagram):
                              edgecolors=self.lap_edge_color
                              )
 
-    def drawDISCDISQ(self):
+    def colorDISCDISQ(self):
         indices = []
         for i, value in enumerate(self.finishPositions):
             if value == "DISC" or value == "DISQ":
@@ -224,25 +276,6 @@ class BoxplotDiagram(Diagram):
         yMax = round(topXpercentOfLaps, 0)
 
         return yMin, yMax
-
-    def calculateMinutesYAxis(self, number_of_seconds_shown):
-
-        yticks = []
-        for sec in number_of_seconds_shown:
-            sec_rounded = round(sec, 2)
-            td_raw = str(timedelta(seconds=sec_rounded))
-            td_minutes = td_raw.split(":", 1)[1]
-
-            if ".5" in td_minutes:
-                td_minutes = ""
-            else:
-                td_minutes = td_minutes + ".0"
-
-            td_minutes = td_minutes[1:]
-
-            yticks.append(td_minutes)
-
-        return yticks
 
     def getSeriesName(self, data):
         return data["metadata"]["series_name"]
@@ -289,3 +322,26 @@ class BoxplotDiagram(Diagram):
         figureName = f"boxplot_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location
+
+    def prepareData(self, originalData, showDiscDisq):
+        if showDiscDisq:
+            return originalData
+        else: # always include userdriver, even if disc/disq
+            user_driver_id = originalData["metadata"]["user_driver_id"]
+            originalData["drivers"] = [driver for driver in originalData["drivers"] if driver["result_status"] == "Running" or driver["id"] == user_driver_id]
+            return originalData
+
+    def getSeriesId(self, data):
+        return data["metadata"]["series_id"]
+
+    def setHeaderText(self):
+        locationSeriesNameY0 = 1 - self.convertPixelsToFigureCoords(35)
+        space = self.convertPixelsToFigureCoords(25)
+
+        self.fig.text(0.5, locationSeriesNameY0, self.seriesName, fontsize=16, fontweight="1000", color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space, self.track, color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space * 2, f"{self.sessionTime} | SOF: {self.sof}", color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space * 3, f"ID: {self.subsessionId}", color=self.text_color, horizontalalignment="center")
+
+    def getRainInfo(self, data):
+        return data["metadata"]["is_rainy_session"]

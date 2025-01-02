@@ -1,88 +1,58 @@
 import asyncio
+import traceback
 from enum import Enum
 import discord
+from discord import app_commands
+from _backend.application.utils.publicappexception import PublicAppException
 
-from _api.api import getMedianImage, getBoxplotImage, getDeltaImage
-from _api.apiDatabase import storeNewMemberId, updateMemberId
-from _backend.application.session.sessionmanager import SessionManager
+class Messages(Enum):
+    ERROR_NO_MEMBER_ID_FOUND = discord.Embed(title="❌ Error",
+                                             description="You must register yourself first with /regsiter. The bot will remember your credentials for all subsequent commands.",
+                                             color=0xFF0000)
+    ERROR_NO_CREDENTIALS_PROVIDED = discord.Embed(title="❌ Error",
+                                                  description="You must provide either 'iracing_id' or 'iracing_name'. Your credentials will be remembered by the bot for all following commands.",
+                                                  color=0xFF0000)
+    SUCCESS_CREDENTIALS_SAVED = discord.Embed(title="✅ Success", color=0x33CC33)
+    ERROR_SESSION_ID = discord.Embed(title="❌ Error",
+                                     description="You must provide either 'subsession_id' or 'selected_session'.",
+                                     color=0xFF0000)
+    ERROR_TIMEOUT = discord.Embed(title="⏱️ Timeout",
+                                  description="The request timed out after 20 seconds. Please try again later.",
+                                  color=0xFFA500)
+    ERROR_PUBLIC = discord.Embed(title="❌ Error", color=0xFF0000)
+    ERROR_INTERNAL = discord.Embed(title="❌ Error",
+                                   description="Encountered an error while processing data.",
+                                   color=0xFF0000)
 
+def getValuesSelectedSession():
+    return [
+            app_commands.Choice(name="-1", value=-1),
+            app_commands.Choice(name="-2", value=-2),
+            app_commands.Choice(name="-3", value=-3),
+            app_commands.Choice(name="-4", value=-4),
+            app_commands.Choice(name="-5", value=-5),
+            app_commands.Choice(name="-6", value=-6),
+            app_commands.Choice(name="-7", value=-7),
+            app_commands.Choice(name="-8", value=-8),
+            app_commands.Choice(name="-9", value=-9),
+            app_commands.Choice(name="-10", value=-10),
+        ]
 
-def extractMemberIdToUse(memberIdDatabase, member_id, status):
-    if status == MemberIdStatus.FIRST_ID:
-        result = member_id
-    elif status == MemberIdStatus.CACHE_ID:
-        result = memberIdDatabase
-    elif status == MemberIdStatus.EXISTS_ALREADY_ID:
-        result = memberIdDatabase
-    elif status == MemberIdStatus.REFRESH_ID:
-        result = member_id
-    else:
-        result = member_id  # fallback
+async def handleException(exception, interaction) -> None:
+    if type(exception) == asyncio.TimeoutError:
+        embed = Messages.ERROR_TIMEOUT
+    elif type(exception) == PublicAppException:
+        embed = Messages.ERROR_PUBLIC
+        embed.value.description = exception.args[0]
+    else: # Exception catch-all
+        embed = Messages.ERROR_INTERNAL
 
-    return result
+    if type(exception) != PublicAppException:
+        traceback.print_exc() # print stacktrace to console
+        print(f"ERROR:\n"
+            f"  type: {embed.name}\n"
+            f"  user: {interaction.user} ({interaction.user.id}),\n"
+            f"  data: {{command: '{interaction.data['name']}', options: '{interaction.data['options']} }}")
 
-def getMemberIdStatus(member_id, activeMemberIdDatabase):
-    if not activeMemberIdDatabase and not member_id:
-        result = MemberIdStatus.NO_ID
-
-    elif not activeMemberIdDatabase and member_id:
-        result = MemberIdStatus.FIRST_ID
-
-    elif activeMemberIdDatabase and not member_id:
-        result = MemberIdStatus.CACHE_ID
-
-    elif activeMemberIdDatabase and member_id and member_id == activeMemberIdDatabase:
-        result = MemberIdStatus.EXISTS_ALREADY_ID
-
-    elif activeMemberIdDatabase and member_id and member_id != activeMemberIdDatabase:
-        result = MemberIdStatus.REFRESH_ID
-
-    else:
-        raise RuntimeError(
-            f"No id combination found for given member_id {member_id} and memberIdDatabase {activeMemberIdDatabase}")
-
-    return result
-
-async def createBoxplotImage(memberIdToUse, selected_session, show_real_name, subsession_id, show_laptimes, cookieJar):
-    sessionManager = SessionManager()
-    sessionManager.cookie_jar = cookieJar
-
-    imagefileLocation = await asyncio.wait_for(getBoxplotImage(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id,
-                                                               showRealName=show_real_name, showLaptimes=show_laptimes, sessionManager=sessionManager), 20)
-    file = discord.File(imagefileLocation)
-    return file
-
-async def postMessage(file, interaction, status):
-    if status == MemberIdStatus.FIRST_ID or status == MemberIdStatus.EXISTS_ALREADY_ID or status == MemberIdStatus.REFRESH_ID:
-        await interaction.followup.send(file=file, content="⚠️ Hint: The bot will now remember your entered member_id. You don't have to provide it anymore.")
-    else:
-        await interaction.followup.send(file=file)
-
-def updateDatabase(status, member_id, discordId):
-    if status == MemberIdStatus.FIRST_ID:
-        storeNewMemberId(member_id, discordId)
-    if status == MemberIdStatus.REFRESH_ID:
-        updateMemberId(member_id, discordId)
-
-class MemberIdStatus(Enum):
-    NO_ID = 1,                  # no member_id provided, no memberId in db -> error
-    FIRST_ID = 2                # member_id provided, no memberId in db -> use new id and save in db
-    CACHE_ID = 3                # no member_id provided, memberId found in db -> use id from db (caching)
-    EXISTS_ALREADY_ID = 4       # member_id provided, member_id == memberId from db -> use from db
-    REFRESH_ID = 5              # member_id provided, member_id != memberId from db -> replace old memberId with new member_id
-
-async def createMedianImage(memberIdToUse, selected_session, show_real_name, subsession_id, cookieJar):
-    sessionManager = SessionManager()
-    sessionManager.cookie_jar = cookieJar
-
-    imagefileLocation = await asyncio.wait_for(getMedianImage(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id, showRealName=show_real_name, sessionManager=sessionManager), 20)
-    file = discord.File(imagefileLocation)
-    return file
-
-async def createDeltaImage(memberIdToUse, selected_session, show_real_name, subsession_id, cookieJar):
-    sessionManager = SessionManager()
-    sessionManager.cookie_jar = cookieJar
-
-    imagefileLocation = await asyncio.wait_for(getDeltaImage(userId=memberIdToUse, selectedSession=selected_session, subsessionId=subsession_id, showRealName=show_real_name, sessionManager=sessionManager), 20)
-    file = discord.File(imagefileLocation)
-    return file
+    await interaction.followup.send(embed=embed.value, ephemeral=True)
+    return

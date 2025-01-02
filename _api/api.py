@@ -1,25 +1,40 @@
-import asyncio
-
-from _api.apiDatabase import getSessionForUser, storeSessionForUser
+from _api import apiDatabase
 from _backend.application.dataprocessors.dataprocessor import Dataprocessor
 from _backend.application.diagrams.boxplot import BoxplotDiagram
 from _backend.application.diagrams.delta import DeltaDiagram
 from _backend.application.diagrams.laptime import LaptimeDiagram
 from _backend.application.diagrams.median import MedianDiagram
+from _backend.application.service.driverid_search import searchDriverId
+from _backend.application.service.drivername_search import searchDriverName
 from _backend.application.service.recent_races import requestSubessionId
 from _backend.application.session.sessionmanager import SessionManager
 
+async def findAndSaveIdForName(sessionManager: SessionManager, member_name: str, discord_id: int):
+    member_id = await searchDriverId(member_name, sessionManager)
+    member_id_database = apiDatabase.getMemberIdForDiscordId(discord_id)
 
-async def getBoxplotImage(**kwargs):
+    if member_id_database is None:
+        apiDatabase.storeNewMemberId(member_id, discord_id)
+    else:
+        apiDatabase.updateMemberId(member_id, discord_id)
 
-    selectedSession = kwargs.get('selectedSession', None)
-    subsessionId = kwargs.get('subsessionId', None)
-    userId = kwargs.get('userId', None)
-    showRealName = kwargs.get('showRealName', None)
-    showLaptimes = kwargs.get('showLaptimes', None)
-    sessionManager: SessionManager = kwargs.get("sessionManager")
+    return member_id
 
-    sessionManager.newSession()
+async def findAndSaveIdForId(sessionManager: SessionManager, member_id: int, discord_id: int):
+    member_name = await searchDriverName(member_id, sessionManager)
+    member_id_database = apiDatabase.getMemberIdForDiscordId(discord_id)
+
+    if member_id_database is None:
+        apiDatabase.storeNewMemberId(member_id, discord_id)
+    else:
+        apiDatabase.updateMemberId(member_id, discord_id)
+
+    return member_name
+
+async def getBoxplotImage(sessionManager, params):
+    subsessionId = params.get("subsession_id", None)
+    selectedSession = params.get("selected_session", None)
+    userId = params.get("memberId", None)
 
     if not subsessionId:
         subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
@@ -33,19 +48,14 @@ async def getBoxplotImage(**kwargs):
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
         saveSessionToDatabase(userId, subsessionId, data)
 
-    # write_file_content(boxplotData)
-    # data = read_file_content()
-    fileLocation = BoxplotDiagram(data, showRealName=showRealName, showLaptimes=showLaptimes).draw()
+    fileLocation = BoxplotDiagram(data, params).draw()
+
     return fileLocation
 
-async def getMedianImage(**kwargs):
-    selectedSession = kwargs.get('selectedSession', None)
-    subsessionId = kwargs.get('subsessionId', None)
-    userId = kwargs.get('userId', None)
-    showRealName = kwargs.get('showRealName', None)
-    sessionManager: SessionManager = kwargs.get("sessionManager")
-
-    sessionManager.newSession()
+async def getMedianImage(sessionManager, params):
+    subsessionId = params.get("subsession_id", None)
+    selectedSession = params.get("selected_session", None)
+    userId = params.get("memberId", None)
 
     if not subsessionId:
         subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
@@ -59,17 +69,17 @@ async def getMedianImage(**kwargs):
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
         saveSessionToDatabase(userId, subsessionId, data)
 
-    fileLocation = MedianDiagram(data, showRealName=showRealName).draw()
+    fileLocation = MedianDiagram(data, params).draw()
+
     return fileLocation
 
-async def getDeltaImage(**kwargs):
-    selectedSession = kwargs.get('selectedSession', None)
-    subsessionId = kwargs.get('subsessionId', None)
-    userId = kwargs.get('userId', None)
-    showRealName = kwargs.get('showRealName', None)
-    sessionManager: SessionManager = kwargs.get("sessionManager")
+async def getDeltaImage(cookieJar, params):
+    subsessionId = params.get("subsession_id", None)
+    selectedSession = params.get("selected_session", None)
+    userId = params.get("memberId", None)
 
-    # sessionManager.newSession()
+    sessionManager = SessionManager()
+    sessionManager.newSession(cookieJar)
 
     if not subsessionId:
         subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
@@ -78,12 +88,12 @@ async def getDeltaImage(**kwargs):
 
     if dataInDatabase:
         data = dataInDatabase
-        # await sessionManager.session.close()
+        await sessionManager.session.close()
     else:
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
         saveSessionToDatabase(userId, subsessionId, data)
 
-    fileLocation = DeltaDiagram(data, showRealName=showRealName).draw()
+    fileLocation = DeltaDiagram(data, params).draw()
     return fileLocation
 
 async def getLaptimeImage(**kwargs):
@@ -111,12 +121,12 @@ async def getLaptimeImage(**kwargs):
     return fileLocation
 
 def loadSessionFromDatabase(custId, sessionId):
-    return getSessionForUser(custId, sessionId)
+    return apiDatabase.getSessionForUser(custId, sessionId)
 
 def saveSessionToDatabase(custId, sessionId, data):
-    storeSessionForUser(custId, sessionId, data)
+    apiDatabase.storeSessionForUser(custId, sessionId, data)
 
-asyncio.run(getDeltaImage(userId=817320, subsessionId=73095230))
+# asyncio.run(getBoxplotImage(None, params={"memberId": 817320, "subsession_id": 73303628}))
 # asyncio.run(getDeltaImage(userId=817320, subsessionId=72801368))
 # asyncio.run(getDeltaImage(userId=817320, subsessionId=72797931))
 # asyncio.run(getDeltaImage(userId=817320, subsessionId=73019927)) #bug, userdriver 2nd

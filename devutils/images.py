@@ -1,8 +1,5 @@
 import asyncio
 from pathlib import Path
-from reportlab.graphics import renderPM
-from svglib.svglib import svg2rlg
-
 from _backend.application.session.sessionmanager import SessionManager
 
 async def requestCarLogos():
@@ -10,8 +7,7 @@ async def requestCarLogos():
     cookie = await sessionManager.authenticate()
 
     sessionManager = SessionManager()
-    sessionManager.cookie_jar = cookie
-    sessionManager.newSession()
+    sessionManager.newSession(cookie)
 
     response1 = await sessionManager.session.get('https://members-ng.iracing.com/data/car/assets')
     json = await response1.json()
@@ -35,8 +31,7 @@ async def requestSeriesLogos():
     cookie = await sessionManager.authenticate()
 
     sessionManager = SessionManager()
-    sessionManager.cookie_jar = cookie
-    sessionManager.newSession()
+    sessionManager.newSession(cookie)
 
     response1 = await sessionManager.session.get('https://members-ng.iracing.com/data/series/assets')
     json = await response1.json()
@@ -71,8 +66,7 @@ async def requestTrackmaps():
     cookie = await sessionManager.authenticate()
 
     sessionManager = SessionManager()
-    sessionManager.cookie_jar = cookie
-    sessionManager.newSession()
+    sessionManager.newSession(cookie)
 
     response1 = await sessionManager.session.get('https://members-ng.iracing.com/data/track/assets')
     json = await response1.json()
