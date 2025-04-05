@@ -7,7 +7,7 @@ from _backend.application.utils.publicappexception import PublicAppException
 async def requestSubessionId(cust_id, selectedSession, sessionManager: SessionManager):
 
     # getting a specific subsessionId via argument "selectedSession"
-    # Argument is negative and traverses the list of recent races backwards. -1 for the latest race, -2 for the second to last race etc.
+    # Argument is negative and traverses the list of recent races backwards. -1 for the latest race, -2 for the one before that etc.
 
     async with sessionManager.session.get('https://members-ng.iracing.com/data/stats/member_recent_races', params={'cust_id': cust_id}) as response1:
         json = await response1.json()

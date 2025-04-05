@@ -28,12 +28,13 @@ class SessionManager:
     def newSession(self, cookie):
         self.session = aiohttp.ClientSession(cookie_jar=cookie)
 
-    async def authenticate(self) -> aiohttp.CookieJar:
+    async def authenticateAndGetCookie(self) -> aiohttp.CookieJar:
         loginAdress = "https://members-ng.iracing.com/auth"
         loginHeaders = {"Content-Type": "application/json"}
         authBody = {"email": self.credentials["email"], "password": self.encode_pw()}
 
-        return await self.login(loginAdress, authBody, loginHeaders)
+        cookie = await self.login(loginAdress, authBody, loginHeaders)
+        return cookie
 
     async def login(self, loginAdress, authBody, loginHeaders):
         cookie_jar = aiohttp.CookieJar()

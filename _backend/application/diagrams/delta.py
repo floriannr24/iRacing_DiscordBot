@@ -1,4 +1,5 @@
 import math
+import os
 import statistics
 import uuid
 from datetime import timedelta
@@ -11,6 +12,9 @@ from _backend.application.diagrams.diagram import Diagram
 
 class DeltaDiagram(Diagram):
     def __init__(self, originalData, params):
+
+        self._SHOW_IMAGE_ON_SYSTEM = os.environ.get("SHOW_IMAGE_ON_SYSTEM", False) == "True"
+        self._DISABLE_DISCORD_FRONTEND = os.environ.get("DISABLE_DISCORD_FRONTEND", False) == "True"
 
         # settings
         self.showRealName = params.get('show_real_name', None)
@@ -97,9 +101,13 @@ class DeltaDiagram(Diagram):
         self.setColumnHeaders()
 
         imagePath = self.getImagePath()
-        # plt.savefig(imagePath)
-        plt.show()
-        plt.close()
+
+        if not self._DISABLE_DISCORD_FRONTEND:
+            plt.savefig(imagePath)
+
+        if self._SHOW_IMAGE_ON_SYSTEM and self._DISABLE_DISCORD_FRONTEND:
+            plt.show()
+
         return imagePath
 
     def getMaxYPosition(self):

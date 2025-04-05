@@ -1,4 +1,5 @@
 import math
+import os
 import statistics
 import uuid
 from datetime import timedelta
@@ -16,6 +17,9 @@ from _backend.application.diagrams.images.imageLoader import readCarLogoImages, 
 
 class BoxplotDiagram(Diagram):
     def __init__(self, originalData, params):
+
+        self._SHOW_IMAGE_ON_SYSTEM = os.environ.get("SHOW_IMAGE_ON_SYSTEM", False) == "True"
+        self._DISABLE_DISCORD_FRONTEND = os.environ.get("DISABLE_DISCORD_FRONTEND", False) == "True"
 
         # settings
         self.maxSeconds = params.get('max_seconds', None)
@@ -86,9 +90,14 @@ class BoxplotDiagram(Diagram):
         self.setHeaderImages()
 
         imagePath = self.getImagePath()
-        plt.savefig(imagePath)
-        # plt.show()
-        plt.close()
+
+        if not self._DISABLE_DISCORD_FRONTEND:
+            plt.savefig(imagePath)
+
+        if self._SHOW_IMAGE_ON_SYSTEM and self._DISABLE_DISCORD_FRONTEND:
+            plt.show()
+            plt.close()
+
         return imagePath
 
     def calcPxWidth(self, driverNames):
@@ -318,7 +327,7 @@ class BoxplotDiagram(Diagram):
         return data["metadata"]["subsession_id"]
 
     def getImagePath(self):
-        imagePath = Path().absolute().parent / 'output'
+        imagePath = Path().absolute() / 'output'
         figureName = f"boxplot_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location

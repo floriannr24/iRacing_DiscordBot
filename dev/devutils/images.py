@@ -4,7 +4,7 @@ from _backend.application.session.sessionmanager import SessionManager
 
 async def requestCarLogos():
     sessionManager = SessionManager()
-    cookie = await sessionManager.authenticate()
+    cookie = await sessionManager.authenticateAndGetCookie()
 
     sessionManager = SessionManager()
     sessionManager.newSession(cookie)
@@ -28,7 +28,7 @@ async def requestCarLogos():
 async def requestSeriesLogos():
 
     sessionManager = SessionManager()
-    cookie = await sessionManager.authenticate()
+    cookie = await sessionManager.authenticateAndGetCookie()
 
     sessionManager = SessionManager()
     sessionManager.newSession(cookie)
@@ -63,7 +63,7 @@ async def downloadAndSaveImage(url, id, type, sessionmanager):
 async def requestTrackmaps():
 
     sessionManager = SessionManager()
-    cookie = await sessionManager.authenticate()
+    cookie = await sessionManager.authenticateAndGetCookie()
 
     sessionManager = SessionManager()
     sessionManager.newSession(cookie)

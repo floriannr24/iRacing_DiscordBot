@@ -263,7 +263,8 @@ class Dataprocessor:
         return self.iRacing_results["track"]["track_id"]
 
     def getRainInfo(self):
-        return self.iRacing_results["session_results"][0]["weather_result"]["precip_time_pct"] > 0
+        # return self.iRacing_results["session_results"][0]["weather_result"]["precip_time_pct"] > 0
+        pass
 
     def setPositionLabels(self, dictionary):
         driversRunning = [driver for driver in dictionary["drivers"] if driver["result_status"] == "Running"]

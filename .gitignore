@@ -137,3 +137,5 @@ dist
 /.idea/
 /_frontend/src/reference/
 /database/bot.db
+.env.*
+.env.development

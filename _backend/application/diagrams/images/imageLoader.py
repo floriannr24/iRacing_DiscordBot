@@ -7,8 +7,8 @@ def readCarLogoImages(carIds):
     imgs = []
     for id in carIds:
 
-        imagePath = Path().absolute().parent / 'resources' / 'images' / 'cars'
-        imageName = str(identImageName(id))
+        imagePath = Path().absolute() / 'resources' / 'images' / 'cars'
+        imageName = str(getImageNameForId(id))
         imageNameWithFileFormat = f"{imageName}.png"
         imagePath = str(imagePath / imageNameWithFileFormat)
         try:
@@ -22,7 +22,7 @@ def readCarLogoImages(carIds):
 
 def readSeriesLogoImage(seriesId):
 
-    imagePath = Path().absolute().parent / 'resources' / 'images' / 'series'
+    imagePath = Path().absolute() / 'resources' / 'images' / 'series'
     imageNameWithFileFormat = f"{seriesId}.png"
     imagePath = str(imagePath / imageNameWithFileFormat)
     try:
@@ -33,7 +33,7 @@ def readSeriesLogoImage(seriesId):
         print(f"Error loading image: {imagePath}, {e}")
 
 def readWeatherImage(rainState):
-    imagePath = Path().absolute().parent / 'resources' / 'images' / 'weather'
+    imagePath = Path().absolute() / 'resources' / 'images' / 'weather'
     imageNameWithFileFormat = f"{rainState}.png"
     imagePath = str(imagePath / imageNameWithFileFormat)
     try:
@@ -44,7 +44,7 @@ def readWeatherImage(rainState):
         print(f"Error loading image: {imagePath}, {e}")
 
 
-def identImageName(id):
+def getImageNameForId(id):
 
     manufacturer_map = {
         1: "skipbarber",

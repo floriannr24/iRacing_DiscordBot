@@ -1,20 +1,24 @@
 import asyncio
+import os
 import time
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 import discord.app_commands
-from _api.api import getMedianImage, getBoxplotImage, getDeltaImage, findAndSaveIdForId, findAndSaveIdForName
-from _api.apiDatabase import getMemberIdForDiscordId
+from _api.api import getMedianImage, getBoxplotImage, getDeltaImage, findNameAndSaveIdForId, findAndSaveIdForName
+from _api.apiDatabase import apiDatabase
 from _backend.application.diagrams.delta import ReferenceMode, SelectionMode
 from _backend.application.session.sessionmanager import SessionManager
 from _bot import botUtils
+from _bot.botUtils import start_timer, end_timer
+
 
 class DiscordBot():
-    def __init__(self, token: str, channel_id: int):
-        self.token = token
-        self.channel_id = channel_id
+    def __init__(self):
+        self.token = os.environ.get("TOKEN")
+        self.channel_id = int(os.environ.get("CHANNEL_ID")) if os.environ.get("CHANNEL_ID") else None
         self.bot = commands.Bot(command_prefix="/", intents=discord.Intents.all())
+        self.apiDatabase = apiDatabase()
         self.cookieJar = None
 
         # register event handlers
@@ -40,10 +44,11 @@ class DiscordBot():
     @tasks.loop(minutes=60)
     async def authenticate(self):
         sessionManager = SessionManager()
-        self.cookieJar = await sessionManager.authenticate()
+        self.cookieJar = await sessionManager.authenticateAndGetCookie()
 
     def register_commands(self):
         self.cmdRegister()
+        self.cmdDelete()
         self.cmdBoxplot()
         self.cmdMedian()
         # self.cmdDelta()
@@ -67,16 +72,14 @@ class DiscordBot():
 
             try:
 
-                await interaction.response.defer()
-
-                start_time = time.perf_counter()
+                start_time = await start_timer()
 
                 if iracing_id is None and iracing_name is None:
                     await interaction.response.send_message(embed=botUtils.Messages.ERROR_NO_CREDENTIALS_PROVIDED.value, ephemeral=True)
                     return
 
                 if iracing_id:
-                    iracing_name = await asyncio.wait_for(findAndSaveIdForId(sessionManager, iracing_id, discordId), 20)
+                    iracing_name = await asyncio.wait_for(findNameAndSaveIdForId(sessionManager, iracing_id, discordId), 20)
 
                 if iracing_id is None and iracing_name:
                     iracing_id = await asyncio.wait_for(findAndSaveIdForName(sessionManager, iracing_name, discordId), 20)
@@ -85,9 +88,39 @@ class DiscordBot():
                 embed.description = f"Successfully saved user '{iracing_name}' with id '{iracing_id}'. You can now use the bot."
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
-                end_time = time.perf_counter()
-                execution_time = end_time - start_time
-                print(f"{execution_time:.2f} seconds")
+                await end_timer(start_time)
+
+                return
+
+            except Exception as e:
+                await botUtils.handleException(e, interaction)
+            finally:
+                if not sessionManager.session.closed:
+                    await sessionManager.session.close()
+
+    def cmdDelete(self):
+        @self.bot.tree.command(name="delete", description="Delete your user from the bot.")
+        async def register(interaction: discord.Interaction):
+
+            sessionManager = SessionManager()
+            sessionManager.newSession(self.cookieJar)
+            discordId = interaction.user.id
+
+            try:
+
+                start_time = await start_timer()
+
+                memberIdDatabase = self.apiDatabase.getMemberIdForDiscordId(discordId)
+
+                if memberIdDatabase is None :
+                    await interaction.response.send_message(embed=botUtils.Messages.ERROR_NOT_YET_REGISTERED.value, ephemeral=True)
+                    return
+
+                apiDatabase().deleteMember(discordId)
+
+                await interaction.response.send_message(embed=botUtils.Messages.SUCCESS_CREDENTIALS_DELETED.value, ephemeral=True)
+
+                await end_timer(start_time)
 
                 return
 
@@ -116,10 +149,11 @@ class DiscordBot():
             sessionManager.newSession(self.cookieJar)
 
             try:
-                start_time = time.perf_counter()
+
+                start_time = await start_timer()
 
                 discordId = interaction.user.id
-                memberIdDatabase = getMemberIdForDiscordId(discordId)
+                memberIdDatabase = self.apiDatabase.getMemberIdForDiscordId(discordId)
 
                 if not memberIdDatabase:
                     await interaction.response.send_message(embed=botUtils.Messages.ERROR_NO_MEMBER_ID_FOUND.value, ephemeral=True)
@@ -139,9 +173,7 @@ class DiscordBot():
                 file = discord.File(imagefileLocation)
                 await interaction.followup.send(file=file)
 
-                end_time = time.perf_counter()
-                execution_time = end_time - start_time
-                print(f"{execution_time:.2f} seconds")
+                await end_timer(start_time)
 
                 return
 
@@ -167,10 +199,11 @@ class DiscordBot():
             sessionManager.newSession(self.cookieJar)
 
             try:
-                start_time = time.perf_counter()
+
+                start_time = await start_timer()
 
                 discordId = interaction.user.id
-                memberIdDatabase = getMemberIdForDiscordId(discordId)
+                memberIdDatabase = self.apiDatabase.getMemberIdForDiscordId(discordId)
 
                 if not memberIdDatabase:
                     await interaction.response.send_message(embed=botUtils.Messages.ERROR_NO_MEMBER_ID_FOUND.value, ephemeral=True)
@@ -190,9 +223,7 @@ class DiscordBot():
                 file = discord.File(imagefileLocation)
                 await interaction.followup.send(file=file)
 
-                end_time = time.perf_counter()
-                execution_time = end_time - start_time
-                print(f"{execution_time:.2f} seconds")
+                await end_timer(start_time)
 
                 return
 
@@ -230,7 +261,7 @@ class DiscordBot():
                 start_time = time.perf_counter()
 
                 discordId = interaction.user.id
-                memberIdDatabase = getMemberIdForDiscordId(discordId)
+                memberIdDatabase = self.apiDatabase.getMemberIdForDiscordId(discordId)
 
                 if not memberIdDatabase:
                     await interaction.response.send_message(embed=botUtils.Messages.ERROR_NO_MEMBER_ID_FOUND.value, ephemeral=True)

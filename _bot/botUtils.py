@@ -1,4 +1,6 @@
 import asyncio
+import os
+import time
 import traceback
 from enum import Enum
 import discord
@@ -12,6 +14,12 @@ class Messages(Enum):
     ERROR_NO_CREDENTIALS_PROVIDED = discord.Embed(title="❌ Error",
                                                   description="You must provide either 'iracing_id' or 'iracing_name'. Your credentials will be remembered by the bot for all following commands.",
                                                   color=0xFF0000)
+    ERROR_NOT_YET_REGISTERED = discord.Embed(title="❌ Error",
+                                            description="You are not registered yet, so no account can be deleted.",
+                                            color=0xFF0000)
+    SUCCESS_CREDENTIALS_DELETED = discord.Embed(title="✅ Success",
+                                                description="Sucessfully deleted your account.",
+                                                color=0x33CC33)
     SUCCESS_CREDENTIALS_SAVED = discord.Embed(title="✅ Success", color=0x33CC33)
     ERROR_SESSION_ID = discord.Embed(title="❌ Error",
                                      description="You must provide either 'subsession_id' or 'selected_session'.",
@@ -56,3 +64,20 @@ async def handleException(exception, interaction) -> None:
 
     await interaction.followup.send(embed=embed.value, ephemeral=True)
     return
+
+async def end_timer(start_time):
+    _TIMING = os.environ.get("TIMING") == "True"
+    if (_TIMING):
+        end_time = time.perf_counter()
+        execution_time = end_time - start_time
+        print(f"{execution_time:.2f} seconds")
+    else:
+        return
+
+
+async def start_timer():
+    _TIMING = os.environ.get("TIMING") == "True"
+    if (_TIMING):
+        return time.perf_counter()
+    else:
+        return

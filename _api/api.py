@@ -1,4 +1,4 @@
-from _api import apiDatabase
+from _api.apiDatabase import apiDatabase
 from _backend.application.dataprocessors.dataprocessor import Dataprocessor
 from _backend.application.diagrams.boxplot import BoxplotDiagram
 from _backend.application.diagrams.delta import DeltaDiagram
@@ -11,23 +11,23 @@ from _backend.application.session.sessionmanager import SessionManager
 
 async def findAndSaveIdForName(sessionManager: SessionManager, member_name: str, discord_id: int):
     member_id = await searchDriverId(member_name, sessionManager)
-    member_id_database = apiDatabase.getMemberIdForDiscordId(discord_id)
+    member_id_database = apiDatabase().getMemberIdForDiscordId(discord_id)
 
     if member_id_database is None:
-        apiDatabase.storeNewMemberId(member_id, discord_id)
+        apiDatabase().storeNewMemberId(member_id, discord_id)
     else:
-        apiDatabase.updateMemberId(member_id, discord_id)
+        apiDatabase().updateMemberId(member_id, discord_id)
 
     return member_id
 
-async def findAndSaveIdForId(sessionManager: SessionManager, member_id: int, discord_id: int):
+async def findNameAndSaveIdForId(sessionManager: SessionManager, member_id: int, discord_id: int):
     member_name = await searchDriverName(member_id, sessionManager)
-    member_id_database = apiDatabase.getMemberIdForDiscordId(discord_id)
+    member_id_database = apiDatabase().getMemberIdForDiscordId(discord_id)
 
     if member_id_database is None:
-        apiDatabase.storeNewMemberId(member_id, discord_id)
+        apiDatabase().storeNewMemberId(member_id, discord_id)
     else:
-        apiDatabase.updateMemberId(member_id, discord_id)
+        apiDatabase().updateMemberId(member_id, discord_id)
 
     return member_name
 
@@ -121,14 +121,7 @@ async def getLaptimeImage(**kwargs):
     return fileLocation
 
 def loadSessionFromDatabase(custId, sessionId):
-    return apiDatabase.getSessionForUser(custId, sessionId)
+    return apiDatabase().getSessionDataForUser(custId, sessionId)
 
 def saveSessionToDatabase(custId, sessionId, data):
-    apiDatabase.storeSessionForUser(custId, sessionId, data)
-
-# asyncio.run(getBoxplotImage(None, params={"memberId": 817320, "subsession_id": 73303628}))
-# asyncio.run(getDeltaImage(userId=817320, subsessionId=72801368))
-# asyncio.run(getDeltaImage(userId=817320, subsessionId=72797931))
-# asyncio.run(getDeltaImage(userId=817320, subsessionId=73019927)) #bug, userdriver 2nd
-# asyncio.run(getMedianData(userId=817320, subsessionId=72777447)) #rework
-# asyncio.run(getMedianData(userId=817320, subsessionId=72779496)) #rework
+    apiDatabase().storeSessionDataForUser(custId, sessionId, data)
