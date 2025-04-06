@@ -1,8 +1,12 @@
 import asyncio
+import time
 from http.cookiejar import CookieJar
+
+from importlib_metadata import pass_none
 
 from _api.api import getDeltaImage, getBoxplotImage
 from _backend.application.session.sessionmanager import SessionManager
+from _backend.application.utils.publicappexception import PublicAppException
 from _bot.bot import DiscordBot
 import os
 from dotenv import load_dotenv
@@ -10,14 +14,25 @@ from dotenv import load_dotenv
 
 async def runBackend():
 
-    #boxed
-    await getBoxplotImage(None, params={"memberId": 817320, "subsession_id": 73872593})
-    # asyncio.run(getBoxplotImage(None, params={"memberId": 817320, "subsession_id": 73303628}))
-    # asyncio.run(getDeltaImage(userId=817320, subsessionId=72801368))
-    # asyncio.run(getDeltaImage(userId=817320, subsessionId=72797931))
-    # asyncio.run(getDeltaImage(userId=817320, subsessionId=73019927)) #bug, userdriver 2nd
-    # asyncio.run(getMedianData(userId=817320, subsessionId=72777447)) #rework
-    # asyncio.run(getMedianData(userId=817320, subsessionId=72779496)) #rework
+    #817338 -4
+
+    sessionManager = await initSessionForDev()
+    await getBoxplotImage(sessionManager, params={"memberId": 817338, "selected_session": -4})
+
+    # for x in range(817339, 817350):
+    #     for i in range (1,6):
+    #         sessionManager = await initSessionForDev()
+    #         time.sleep(2)
+    #         try:
+    #             print(x, -i)
+    #             await getBoxplotImage(sessionManager, params={"memberId": x, "selected_session": -i})
+    #         except PublicAppException as e:
+    #             time.sleep(2)
+    #             break
+    #         finally:
+    #             if sessionManager.session and not sessionManager.session.closed:
+    #                 await sessionManager.session.close()
+
 
 async def initSessionForDev():
     sessionManager = SessionManager()

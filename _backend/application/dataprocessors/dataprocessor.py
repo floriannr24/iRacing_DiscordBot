@@ -46,14 +46,22 @@ class Dataprocessor:
 
         return dictionary
 
+    def getRaceSessionResultOfEvent(self):
+        numberOfSessionsInEvent = len(self.iRacing_results["session_results"])
+        lastSessionInEvent = self.iRacing_results["session_results"][numberOfSessionsInEvent - 1]
+
+        if lastSessionInEvent["simsession_name"] != 'RACE':
+            raise PublicAppException("Selected session is not a race session. Only race sessions are supported.")
+        else:
+            return lastSessionInEvent
+
     def searchUsersCarClass(self, id):
 
         carclassid = None
 
-        if len(self.iRacing_results["session_results"]) <= 1:
-            raise PublicAppException("Selected session is a practice session. Only race sessions are supported.")
+        raceSession = self.getRaceSessionResultOfEvent()
 
-        for results in self.iRacing_results["session_results"][2]["results"]:
+        for results in raceSession["results"]:
             if results["cust_id"] == id:
                 carclassid = results["car_class_id"]
                 break
@@ -82,7 +90,9 @@ class Dataprocessor:
     def findUniqueDriversInCarclassOfUserDriver(self, user_carclass):
         unique_drivers = set()
 
-        for driver in self.iRacing_results["session_results"][2]["results"]:
+        raceSessionResult = self.getRaceSessionResultOfEvent()
+
+        for driver in raceSessionResult["results"]:
             if driver["car_class_id"] == user_carclass:
                 unique_drivers.add((driver["cust_id"], driver["display_name"]))
         return unique_drivers
@@ -130,7 +140,9 @@ class Dataprocessor:
         return len(laps_completed_pos) - 1
 
     def set_resultStatus(self, driver_id):
-        for data in self.iRacing_results["session_results"][2]["results"]:
+        raceSessionResult = self.getRaceSessionResultOfEvent()
+
+        for data in raceSessionResult["results"]:
             if driver_id == data["cust_id"]:
                 return data["reason_out"]
 
@@ -160,7 +172,9 @@ class Dataprocessor:
 
         carClass = {}
 
-        for data in self.iRacing_results["session_results"][2]["results"]:
+        raceSessionResult = self.getRaceSessionResultOfEvent()
+
+        for data in raceSessionResult["results"]:
             if data["cust_id"] == driver_id:
                 carClass["name"] = data["car_class_name"]
                 break
@@ -168,7 +182,10 @@ class Dataprocessor:
         return carClass
 
     def set_finishPositionInClass(self, driver_id):
-        for data in self.iRacing_results["session_results"][2]["results"]:
+
+        raceSessionResult = self.getRaceSessionResultOfEvent()
+
+        for data in raceSessionResult["results"]:
             if data["cust_id"] == driver_id:
                 if data["reason_out"] == "Running":
                     return data["finish_position_in_class"] + 1
@@ -215,7 +232,9 @@ class Dataprocessor:
                 return data["car_id"]
 
     def getUserDriverName(self, id):
-        for driver in self.iRacing_results["session_results"][2]["results"]:
+        raceSessionResult = self.getRaceSessionResultOfEvent()
+
+        for driver in raceSessionResult["results"]:
             if driver["cust_id"] == id:
                 return driver["display_name"]
 

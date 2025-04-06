@@ -91,7 +91,7 @@ class BoxplotDiagram(Diagram):
 
         imagePath = self.getImagePath()
 
-        if not self._DISABLE_DISCORD_FRONTEND:
+        if not self._SHOW_IMAGE_ON_SYSTEM or not self._DISABLE_DISCORD_FRONTEND:
             plt.savefig(imagePath)
 
         if self._SHOW_IMAGE_ON_SYSTEM and self._DISABLE_DISCORD_FRONTEND:
@@ -117,16 +117,19 @@ class BoxplotDiagram(Diagram):
 
         # series
         seriesImg = readSeriesLogoImage(self.seriesId)
-        resizeFactor = 0.35
-        seriesImg = resize(seriesImg, (int(seriesImg.shape[0] * resizeFactor), int(seriesImg.shape[1] * resizeFactor)),
-                           anti_aliasing=True)
 
-        imageHeight = seriesImg.shape[0]
-        top0Position = self.px_height - imageHeight
-        spaceForMiddle = (126 - imageHeight) / 2
-        top = top0Position - spaceForMiddle
+        if not seriesImg is None:
 
-        self.fig.figimage(seriesImg, xo=20, yo=top, zorder=3)
+            resizeFactor = 0.35
+            seriesImg = resize(seriesImg, (int(seriesImg.shape[0] * resizeFactor), int(seriesImg.shape[1] * resizeFactor)),
+                               anti_aliasing=True)
+
+            imageHeight = seriesImg.shape[0]
+            top0Position = self.px_height - imageHeight
+            spaceForMiddle = (126 - imageHeight) / 2
+            top = top0Position - spaceForMiddle
+
+            self.fig.figimage(seriesImg, xo=20, yo=top, zorder=3)
 
     def convertPixelsToFigureCoords(self, pixels):
         return pixels / self.px_height
@@ -157,7 +160,7 @@ class BoxplotDiagram(Diagram):
         return [driver["laps"] for driver in data["drivers"]]
 
     def setYLabels(self):
-        self.ax1.yaxis.set_major_locator(plt.MaxNLocator(nbins=12, steps=[1, 2, 2.5, 5, 10]))
+        # self.ax1.yaxis.set_major_locator(plt.MaxNLocator(nbins=12, steps=[1, 2, 2.5, 5, 10]))
         formatter = FuncFormatter(self.formatCustomTickLabels)
         self.ax1.yaxis.set_major_formatter(formatter)
         self.ax1.tick_params(labelsize='large', labelcolor=self.text_color)
