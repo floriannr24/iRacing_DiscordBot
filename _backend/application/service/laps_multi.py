@@ -2,18 +2,21 @@ import asyncio
 import os
 
 from _backend.application.session.sessionmanager import SessionManager, checkForBadServerResponse
+from dev.devutils.localData import saveToJson, loadFromJson
 
 
 async def requestLapsMulti(subsession: int, sessionManager: SessionManager):
 
     _BOXED = os.environ.get("BOXED", False) == "True"
+    _SAVE_DATA = os.environ.get("SAVE_DATA", False) == "True"
+    data = None
 
     if not _BOXED:
 
         async with sessionManager.session.get('https://members-ng.iracing.com/data/results/lap_chart_data', params={"subsession_id": subsession, "simsession_number": "0"}) as response1:
-            json = await response1.json(content_type=None)
-            checkForBadServerResponse(response1, json)
-            link = json["link"]
+            jsonFile = await response1.json(content_type=None)
+            checkForBadServerResponse(response1, jsonFile)
+            link = jsonFile["link"]
 
         async with sessionManager.session.get(link) as response2:
             data = await response2.json(content_type=None)
@@ -27,10 +30,15 @@ async def requestLapsMulti(subsession: int, sessionManager: SessionManager):
             tasks = [requestChunkData(link, s) for link in dataLinks]
             result = await asyncio.gather(*tasks)
             data = [item for sublist in result for item in sublist]
-            return data
+
+        if _SAVE_DATA:
+            saveToJson(data, subsession, "laps_multi")
+
+        return data
 
     else:
-        return None
+        data = loadFromJson(subsession, "laps_multi")
+        return data
 
 async def requestChunkData(link: str, session):
     async with session.get(link) as response:

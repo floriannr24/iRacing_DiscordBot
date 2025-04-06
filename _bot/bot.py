@@ -10,7 +10,7 @@ from _api.apiDatabase import apiDatabase
 from _backend.application.diagrams.delta import ReferenceMode, SelectionMode
 from _backend.application.session.sessionmanager import SessionManager
 from _bot import botUtils
-from _bot.botUtils import start_timer, end_timer
+from _bot.botUtils import start_timer, end_timer, closeSession
 
 
 class DiscordBot():
@@ -95,8 +95,7 @@ class DiscordBot():
             except Exception as e:
                 await botUtils.handleException(e, interaction)
             finally:
-                if not sessionManager.session.closed:
-                    await sessionManager.session.close()
+                await closeSession(sessionManager)
 
     def cmdDelete(self):
         @self.bot.tree.command(name="delete", description="Delete your user from the bot.")
@@ -127,8 +126,7 @@ class DiscordBot():
             except Exception as e:
                 await botUtils.handleException(e, interaction)
             finally:
-                if not sessionManager.session.closed:
-                    await sessionManager.session.close()
+                await closeSession(sessionManager)
 
     def cmdBoxplot(self):
         @self.bot.tree.command(name="boxplot", description="Creates a boxplot out of a past iRacing session.")
@@ -179,6 +177,9 @@ class DiscordBot():
 
             except Exception as e:
                 await botUtils.handleException(e, interaction)
+            finally:
+                await closeSession(sessionManager)
+
 
     def cmdMedian(self):
         @self.bot.tree.command(name="median", description="Compares your personal median to other drivers' median.")
@@ -230,8 +231,7 @@ class DiscordBot():
             except Exception as e:
                 await botUtils.handleException(e, interaction)
             finally:
-                if not sessionManager.session.closed:
-                    await sessionManager.session.close()
+                await closeSession(sessionManager)
 
     def cmdDelta(self):
         @self.bot.tree.command(name="delta", description="Shows the delta per lap to other drivers.")

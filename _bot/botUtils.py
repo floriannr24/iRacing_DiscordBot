@@ -5,6 +5,8 @@ import traceback
 from enum import Enum
 import discord
 from discord import app_commands
+
+from _backend.application.session.sessionmanager import SessionManager
 from _backend.application.utils.publicappexception import PublicAppException
 
 class Messages(Enum):
@@ -81,3 +83,7 @@ async def start_timer():
         return time.perf_counter()
     else:
         return
+
+async def closeSession(sessionManager: SessionManager):
+    if sessionManager.session and not sessionManager.session.closed:
+        await sessionManager.session.close()

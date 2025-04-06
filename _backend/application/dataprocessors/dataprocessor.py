@@ -16,12 +16,7 @@ class Dataprocessor:
             self.iRacing_results = await requestResultsMulti(subsessionId, sessionManager)
             self.iRacing_lapdata = await requestLapsMulti(subsessionId, sessionManager)
         except PublicAppException as e:
-            await sessionManager.session.close()
             raise PublicAppException(e.args[0])
-        except Exception as e:
-            await sessionManager.session.close()
-            raise RuntimeError()
-
         # better session.close behavior?
         # session.close for timeout?
 

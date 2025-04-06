@@ -43,7 +43,6 @@ async def getBoxplotImage(sessionManager, params):
 
     if dataInDatabase:
         data = dataInDatabase
-        await sessionManager.session.close()
     else:
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
         saveSessionToDatabase(userId, subsessionId, data)
@@ -64,7 +63,6 @@ async def getMedianImage(sessionManager, params):
 
     if dataInDatabase:
         data = dataInDatabase
-        await sessionManager.session.close()
     else:
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
         saveSessionToDatabase(userId, subsessionId, data)
@@ -88,7 +86,6 @@ async def getDeltaImage(cookieJar, params):
 
     if dataInDatabase:
         data = dataInDatabase
-        await sessionManager.session.close()
     else:
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
         saveSessionToDatabase(userId, subsessionId, data)
@@ -112,7 +109,6 @@ async def getLaptimeImage(**kwargs):
 
     if dataInDatabase:
         data = dataInDatabase
-        # await sessionManager.session.close()
     else:
         data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
         saveSessionToDatabase(userId, subsessionId, data)

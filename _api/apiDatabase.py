@@ -49,7 +49,7 @@ class apiDatabase:
 
     def getSessionDataForUser(self, custId, sessionId):
 
-        if not self._BOXED and not self._DISABLE_CACHING_SESSION:
+        if not self._DISABLE_CACHING_SESSION:
 
             con = sqlite3.connect(self.location)
             cur = con.cursor()
@@ -65,7 +65,7 @@ class apiDatabase:
 
     def storeSessionDataForUser(self, custId, sessionId, data) -> None:
 
-        if not self._BOXED and not self._DISABLE_CACHING_SESSION:
+        if not self._DISABLE_CACHING_SESSION:
 
             con = sqlite3.connect(self.location)
             cur = con.cursor()
