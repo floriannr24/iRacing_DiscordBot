@@ -17,8 +17,6 @@ class Dataprocessor:
             self.iRacing_lapdata = await requestLapsMulti(subsessionId, sessionManager)
         except PublicAppException as e:
             raise PublicAppException(e.args[0])
-        # better session.close behavior?
-        # session.close for timeout?
 
         if not self.iRacing_results or not self.iRacing_lapdata:
             raise RuntimeError("'self.iRacing_results' or 'self.iRacing_lapdata' is null")

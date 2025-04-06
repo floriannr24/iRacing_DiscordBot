@@ -85,7 +85,7 @@ class DiscordBot():
                     iracing_id = await asyncio.wait_for(findAndSaveIdForName(sessionManager, iracing_name, discordId), 20)
 
                 embed = botUtils.Messages.SUCCESS_CREDENTIALS_SAVED.value
-                embed.description = f"Successfully saved user '{iracing_name}' with id '{iracing_id}'. You can now use the bot."
+                embed.description = f"Successfully saved user '{iracing_name}' with iRacing-ID '{iracing_id}'. You can now use the bot."
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 await end_timer(start_time)
@@ -115,7 +115,7 @@ class DiscordBot():
                     await interaction.response.send_message(embed=botUtils.Messages.ERROR_NOT_YET_REGISTERED.value, ephemeral=True)
                     return
 
-                apiDatabase().deleteMember(discordId)
+                self.apiDatabase.deleteMember(discordId)
 
                 await interaction.response.send_message(embed=botUtils.Messages.SUCCESS_CREDENTIALS_DELETED.value, ephemeral=True)
 

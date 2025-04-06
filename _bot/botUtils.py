@@ -11,7 +11,7 @@ from _backend.application.utils.publicappexception import PublicAppException
 
 class Messages(Enum):
     ERROR_NO_MEMBER_ID_FOUND = discord.Embed(title="❌ Error",
-                                             description="You must register yourself first with /regsiter. The bot will remember your credentials for all subsequent commands.",
+                                             description="You must register yourself first with /register. The bot will remember your credentials for all subsequent commands.",
                                              color=0xFF0000)
     ERROR_NO_CREDENTIALS_PROVIDED = discord.Embed(title="❌ Error",
                                                   description="You must provide either 'iracing_id' or 'iracing_name'. Your credentials will be remembered by the bot for all following commands.",
