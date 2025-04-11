@@ -129,13 +129,14 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-/_backend/deprecated/
-/_backend/application/session/files/
-/_frontend/node_modules/
-/_frontend/.angular/
-/_frontend/.vscode/
 /.idea/
-/_frontend/src/reference/
+
+/_backend/application/session/files/
+
+/dev/reference/
+/dev/boxedData/
+
 /database/bot.db
+
 .env.*
 .env.development
