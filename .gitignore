@@ -131,8 +131,6 @@ dist
 
 /.idea/
 
-/_backend/application/session/files/
-
 /dev/reference/
 /dev/boxedData/
 
