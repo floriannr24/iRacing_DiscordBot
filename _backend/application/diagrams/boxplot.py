@@ -86,13 +86,16 @@ class BoxplotDiagram(Diagram):
         plt.tight_layout()
         plt.subplots_adjust(top=1-self.convertPixelsToFigureCoords(128))
 
-        self.setHeaderText()
-        self.setHeaderImages()
+        textObj = self.setHeaderText()
+        seriesImgObj = self.setHeaderImages()
+
+        self.adjustWidthToPreventOverlap(textObj, seriesImgObj)
 
         imagePath = self.getImagePath()
 
         if not self._SHOW_IMAGE_ON_SYSTEM or not self._DISABLE_DISCORD_FRONTEND:
             plt.savefig(imagePath)
+            plt.close()
 
         if self._SHOW_IMAGE_ON_SYSTEM and self._DISABLE_DISCORD_FRONTEND:
             plt.show()
@@ -115,6 +118,8 @@ class BoxplotDiagram(Diagram):
 
     def setHeaderImages(self):
 
+        seriesImgObj = None
+
         # series
         seriesImg = readSeriesLogoImage(self.seriesId)
 
@@ -131,8 +136,17 @@ class BoxplotDiagram(Diagram):
 
             self.fig.figimage(seriesImg, xo=20, yo=top, zorder=3)
 
+            seriesImgObj = seriesImg
+        else:
+            seriesImgObj = None
+
+        return seriesImgObj
+
     def convertPixelsToFigureCoords(self, pixels):
         return pixels / self.px_height
+
+    def convertPixelToInches(self, pixels):
+        return pixels / self.fig.dpi
 
     def setTitleTexts(self):
         locationSeriesName = 0.96
@@ -171,7 +185,13 @@ class BoxplotDiagram(Diagram):
         minutesAndSecondsClean = minutesAndSeconds.split(":", 1)[1]
 
         # .5 without tick labels
-        if ".5" in minutesAndSecondsClean:
+        if (".5" in minutesAndSecondsClean or
+            ".2" in minutesAndSecondsClean or
+            ".4" in minutesAndSecondsClean or
+            ".6" in minutesAndSecondsClean or
+            ".8" in minutesAndSecondsClean or
+            ".75" in minutesAndSecondsClean or
+            ".25" in minutesAndSecondsClean):
             labelWithDecimal = ""
         else:
             labelWithDecimal = minutesAndSecondsClean + ".0"
@@ -331,7 +351,10 @@ class BoxplotDiagram(Diagram):
 
     def getImagePath(self):
         imagePath = Path().absolute() / 'output'
-        figureName = f"boxplot_{str(uuid.uuid4())}.png"
+        # figureName = f"boxplot_{str(uuid.uuid4())}.png"
+        subsession = str(self.subsessionId)
+        userid = str(self.data["metadata"]["user_driver_id"])
+        figureName = f"boxplot_{subsession}_{userid}.png"
         location = str(imagePath / figureName)
         return location
 
@@ -350,10 +373,31 @@ class BoxplotDiagram(Diagram):
         locationSeriesNameY0 = 1 - self.convertPixelsToFigureCoords(35)
         space = self.convertPixelsToFigureCoords(25)
 
-        self.fig.text(0.5, locationSeriesNameY0, self.seriesName, fontsize=16, fontweight="1000", color=self.text_color, horizontalalignment="center")
+        text_obj = self.fig.text(0.5, locationSeriesNameY0, self.seriesName, fontsize=16, fontweight="1000", color=self.text_color, horizontalalignment="center")
         self.fig.text(0.5, locationSeriesNameY0 - space, self.track, color=self.text_color, horizontalalignment="center")
         self.fig.text(0.5, locationSeriesNameY0 - space * 2, f"{self.sessionTime} | SOF: {self.sof}", color=self.text_color, horizontalalignment="center")
         self.fig.text(0.5, locationSeriesNameY0 - space * 3, f"ID: {self.subsessionId}", color=self.text_color, horizontalalignment="center")
 
+        return text_obj
+
     def getRainInfo(self, data):
         return data["metadata"]["is_rainy_session"]
+
+    def adjustWidthToPreventOverlap(self, textobj, seriesimgobj):
+        # adjust plot-width to prevent overlap between seriesText and seriesImage
+
+        if not textobj is None and not seriesimgobj is None:
+
+            textWidth = round(textobj.get_window_extent(renderer=self.fig.canvas.get_renderer()).width, 0)
+            textX0 = round((self.px_width - textWidth) / 2, 0)
+            imageWidth = round(seriesimgobj.shape[1], 0)
+            imageX0 = 20 # as defined in setHeaderImages()
+
+            if imageX0 + imageWidth >= textX0:
+                # overlap detected
+                overlapInPixels = imageX0 + imageWidth - textX0
+
+                gap = 15
+                increasePlotWidthByPixels = (overlapInPixels + gap)*2
+                currentWidth = self.px_width
+                self.fig.set_figwidth(self.convertPixelToInches(currentWidth + increasePlotWidthByPixels))
