@@ -2,6 +2,7 @@ import hashlib
 import base64
 import json
 from datetime import datetime
+from pathlib import Path
 
 import aiohttp
 
@@ -10,8 +11,7 @@ from _backend.application.utils.publicappexception import PublicAppException
 
 class SessionManager:
     def __init__(self):
-        self.credentialLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/session/files/credentials.json"
-        self.cookiejarLocation = "C:/Users/FSX-P/IdeaProjects/iRacing_DiscordBot/_backend/application/session/files/cookie-jar.txt"
+        self.credentialLocation = str(Path().absolute() / '_backend' / 'application' / 'session' / 'files' / "credentials.json")
         self.credentials = self.getCredentials()
         self.session = None
 
