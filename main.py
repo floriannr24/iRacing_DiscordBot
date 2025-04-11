@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 if __name__ == "__main__":
 
-    # Determine .env (default to development)
+    # Determine .env (defaults to development)
     environment = os.environ.get("APP_ENV", "development")
     load_dotenv(f".env.{environment}")
 
