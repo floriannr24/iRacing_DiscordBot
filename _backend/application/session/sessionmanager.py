@@ -1,6 +1,7 @@
 import hashlib
 import base64
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -8,19 +9,14 @@ import aiohttp
 
 from _backend.application.utils.publicappexception import PublicAppException
 
-
 class SessionManager:
     def __init__(self):
-        self.credentialLocation = str(Path().absolute() / '_backend' / 'application' / 'session' / 'files' / "credentials.json")
-        self.credentials = self.getCredentials()
+        self._CREDENTIALS_EMAIL = os.environ.get("CREDENTIALS_EMAIL", None)
+        self._CREDENTIALS_PASSWORD = os.environ.get("CREDENTIALS_PASSWORD", None)
+
         self.session = None
 
-    def getCredentials(self):
-        return json.load(open(self.credentialLocation))
-
-    def encode_pw(self):
-        username = self.credentials["email"]
-        password = self.credentials["password"]
+    def encode_pw(self, username, password):
         initialHash = hashlib.sha256((password + username.lower()).encode('utf-8')).digest()
         hashInBase64 = base64.b64encode(initialHash).decode('utf-8')
         return hashInBase64
@@ -29,12 +25,20 @@ class SessionManager:
         self.session = aiohttp.ClientSession(cookie_jar=cookie)
 
     async def authenticateAndGetCookie(self) -> aiohttp.CookieJar:
-        loginAdress = "https://members-ng.iracing.com/auth"
-        loginHeaders = {"Content-Type": "application/json"}
-        authBody = {"email": self.credentials["email"], "password": self.encode_pw()}
 
-        cookie = await self.login(loginAdress, authBody, loginHeaders)
-        return cookie
+        if self.credentialsLoaded():
+            email = self._CREDENTIALS_EMAIL
+            password = self._CREDENTIALS_PASSWORD
+
+            loginAdress = "https://members-ng.iracing.com/auth"
+            loginHeaders = {"Content-Type": "application/json"}
+
+            authBody = {"email": email, "password": self.encode_pw(email, password)}
+
+            cookie = await self.login(loginAdress, authBody, loginHeaders)
+            return cookie
+        else:
+            raise Exception("No credentials found")
 
     async def login(self, loginAdress, authBody, loginHeaders):
         cookie_jar = aiohttp.CookieJar()
@@ -47,6 +51,8 @@ class SessionManager:
                     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Authenticated")
                     return cookie_jar
 
+    def credentialsLoaded(self):
+        return self._CREDENTIALS_EMAIL and self._CREDENTIALS_PASSWORD
 
 def getMessage404(json):
     if json["message"]:
