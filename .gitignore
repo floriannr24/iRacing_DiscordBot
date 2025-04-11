@@ -136,6 +136,6 @@ dist
 /dev/reference/
 /dev/boxedData/
 
-/database/bot.db
+/database/
 
 .env.*
