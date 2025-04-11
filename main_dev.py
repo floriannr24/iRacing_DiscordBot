@@ -4,7 +4,7 @@ from http.cookiejar import CookieJar
 
 from importlib_metadata import pass_none
 
-from _api.api import getDeltaImage, getBoxplotImage
+from _api.api import getDeltaImage, getBoxplotImage, getMedianImage
 from _backend.application.session.sessionmanager import SessionManager
 from _backend.application.utils.publicappexception import PublicAppException
 from _bot.bot import DiscordBot
@@ -16,23 +16,22 @@ async def runBackend():
 
     #817338 -4
 
-    sessionManager = await initSessionForDev()
-    await getBoxplotImage(sessionManager, params={"memberId": 817338, "selected_session": -4})
+    # sessionManager = await initSessionForDev()
+    # await getBoxplotImage(sessionManager, params={"memberId": 817340, "subsession_id": 50745906})
 
-    # for x in range(817339, 817350):
-    #     for i in range (1,6):
-    #         sessionManager = await initSessionForDev()
-    #         time.sleep(2)
-    #         try:
-    #             print(x, -i)
-    #             await getBoxplotImage(sessionManager, params={"memberId": x, "selected_session": -i})
-    #         except PublicAppException as e:
-    #             time.sleep(2)
-    #             break
-    #         finally:
-    #             if sessionManager.session and not sessionManager.session.closed:
-    #                 await sessionManager.session.close()
-
+    for x in range(817345, 817350):
+        for i in range (1,6):
+            sessionManager = await initSessionForDev()
+            time.sleep(3)
+            try:
+                print(x, -i)
+                await getBoxplotImage(sessionManager, params={"memberId": x, "selected_session": -i})
+            except PublicAppException as e:
+                time.sleep(2)
+                break
+            finally:
+                if sessionManager.session and not sessionManager.session.closed:
+                    await sessionManager.session.close()
 
 async def initSessionForDev():
     sessionManager = SessionManager()
@@ -42,7 +41,7 @@ async def initSessionForDev():
 
 if __name__ == "__main__":
 
-    # Determine .env (default to development)
+    # Determine .env (defaults to development)
     environment = os.environ.get("APP_ENV", "development")
     load_dotenv(f".env.{environment}")
 
