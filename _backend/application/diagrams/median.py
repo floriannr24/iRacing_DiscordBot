@@ -80,7 +80,7 @@ class MedianDiagram(Diagram):
 
         plt.tight_layout()
         plt.subplots_adjust(top=1-self.convertPixelsToFigureCoords(156), right=0.82)
-        # top = space for columnHeaders (28px), headerText and headerImages (128px)
+        # top = space for columnHeaders (28px) + headerText, headerImages (128px)
         # right = space for 'Delta' and 'Median' cols
 
         self.setColumnHeaders()
@@ -89,11 +89,13 @@ class MedianDiagram(Diagram):
 
         imagePath = self.getImagePath()
 
-        if not self._DISABLE_DISCORD_FRONTEND:
+        if not self._SHOW_IMAGE_ON_SYSTEM or not self._DISABLE_DISCORD_FRONTEND:
             plt.savefig(imagePath)
+            plt.close()
 
         if self._SHOW_IMAGE_ON_SYSTEM and self._DISABLE_DISCORD_FRONTEND:
             plt.show()
+            plt.close()
 
         return imagePath
 
@@ -334,7 +336,10 @@ class MedianDiagram(Diagram):
 
     def getImagePath(self):
         imagePath = Path().absolute() / 'output'
-        figureName = f"median_{str(uuid.uuid4())}.png"
+        subsession = str(self.subsessionId)
+        userid = str(self.data["metadata"]["user_driver_id"])
+        figureName = f"median_{subsession}_{userid}.png"
+        # figureName = f"median_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location
 
@@ -436,15 +441,18 @@ class MedianDiagram(Diagram):
 
         # series
         seriesImg = readSeriesLogoImage(self.seriesId)
-        resizeFactor = 0.35
-        seriesImg = resize(seriesImg, (int(seriesImg.shape[0] * resizeFactor), int(seriesImg.shape[1] * resizeFactor)), anti_aliasing=True)
 
-        imageHeight = seriesImg.shape[0]
-        top0Position = self.px_height-imageHeight
-        spaceForMiddle = (126 - imageHeight) / 2
-        top = top0Position - spaceForMiddle
+        if not seriesImg is None:
 
-        self.fig.figimage(seriesImg, xo=20, yo=top, zorder=3)
+            resizeFactor = 0.35
+            seriesImg = resize(seriesImg, (int(seriesImg.shape[0] * resizeFactor), int(seriesImg.shape[1] * resizeFactor)), anti_aliasing=True)
+
+            imageHeight = seriesImg.shape[0]
+            top0Position = self.px_height-imageHeight
+            spaceForMiddle = (126 - imageHeight) / 2
+            top = top0Position - spaceForMiddle
+
+            self.fig.figimage(seriesImg, xo=20, yo=top, zorder=3)
 
         # weather
         # seriesImg = readSeriesLogoImage(self.seriesId)
