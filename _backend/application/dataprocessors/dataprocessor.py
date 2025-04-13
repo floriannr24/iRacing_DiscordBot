@@ -19,10 +19,10 @@ class Dataprocessor:
             raise PublicAppException(e.args[0])
 
         if not self.iRacing_results or not self.iRacing_lapdata:
-            raise RuntimeError("'self.iRacing_results' or 'self.iRacing_lapdata' is null")
+            raise Exception("'self.iRacing_results' or 'self.iRacing_lapdata' is null")
 
         user_carclass = self.searchUsersCarClass(userId)
-        unique_drivers = self.findUniqueDriversInCarclassOfUserDriver(user_carclass)
+        unique_drivers = self.findUniqueDriversInCarclass(user_carclass)
 
         dictionary = {
             "metadata": {
@@ -87,7 +87,7 @@ class Dataprocessor:
 
         dictionary["drivers"] = primarySortRunning + primarySortDiscDisq
 
-    def findUniqueDriversInCarclassOfUserDriver(self, user_carclass):
+    def findUniqueDriversInCarclass(self, user_carclass):
         unique_drivers = set()
 
         raceSessionResult = self.getRaceSessionResultOfEvent()

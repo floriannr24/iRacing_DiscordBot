@@ -54,27 +54,22 @@ class SessionManager:
     def credentialsLoaded(self):
         return self._CREDENTIALS_EMAIL and self._CREDENTIALS_PASSWORD
 
-def getMessage404(json):
+def getMessage(json):
     if json["message"]:
         message = json["message"]
     else:
         message = json
     return message
 
-def getMessage400(json):
-    if json["message"]:
-        message = json["message"]
-    else:
-        message = json
-    return message
-
-def checkForBadServerResponse(response, json):
+async def checkForBadServerResponse(response):
     if response.status != 200:
         if response.status == 404:
-            message = getMessage404(json)
+            message = getMessage(await response.json(content_type=None))
             raise PublicAppException(message)
         if response.status == 400:
-            message = getMessage400(json)
+            message = getMessage(await response.json(content_type=None))
             raise PublicAppException(message)
+        if response.status == 401:
+            raise Exception("Not authenticated")
         else:
             raise PublicAppException("iRacing API couldn't be reached. There may be maintenance work taking place at the moment.")

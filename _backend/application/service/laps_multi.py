@@ -14,13 +14,13 @@ async def requestLapsMulti(subsession: int, sessionManager: SessionManager):
     if not _BOXED:
 
         async with sessionManager.session.get('https://members-ng.iracing.com/data/results/lap_chart_data', params={"subsession_id": subsession, "simsession_number": "0"}) as response1:
+            await checkForBadServerResponse(response1)
             jsonFile = await response1.json(content_type=None)
-            checkForBadServerResponse(response1, jsonFile)
             link = jsonFile["link"]
 
         async with sessionManager.session.get(link) as response2:
+            await checkForBadServerResponse(response2)
             data = await response2.json(content_type=None)
-            checkForBadServerResponse(response2, data)
             base_download_url = data["chunk_info"]["base_download_url"]
             chunk_file_names = data["chunk_info"]["chunk_file_names"]
 
@@ -42,6 +42,6 @@ async def requestLapsMulti(subsession: int, sessionManager: SessionManager):
 
 async def requestChunkData(link: str, session):
     async with session.get(link) as response:
+        await checkForBadServerResponse(response)
         json = await response.json(content_type=None)
-        checkForBadServerResponse(response, json)
         return json

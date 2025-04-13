@@ -386,7 +386,7 @@ class BoxplotDiagram(Diagram):
     def adjustWidthToPreventOverlap(self, textobj, seriesimgobj):
         # adjust plot-width to prevent overlap between seriesText and seriesImage
 
-        if textobj and seriesimgobj:
+        if not textobj is None and not seriesimgobj is None:
 
             textWidth = round(textobj.get_window_extent(renderer=self.fig.canvas.get_renderer()).width, 0)
             textX0 = round((self.px_width - textWidth) / 2, 0)
@@ -401,3 +401,4 @@ class BoxplotDiagram(Diagram):
                 increasePlotWidthByPixels = (overlapInPixels + gap)*2
                 currentWidth = self.px_width
                 self.fig.set_figwidth(self.convertPixelToInches(currentWidth + increasePlotWidthByPixels))
+                self.px_width = currentWidth + increasePlotWidthByPixels
