@@ -66,6 +66,7 @@ def getImageNameForId(id):
         29: "dallara",
         30: "ford",
         31: "empty",
+        33: "williams",
         34: "mazda",
         35: "mazda",
         37: "empty",
@@ -189,7 +190,10 @@ def getImageNameForId(id):
         192: "chevrolet",
         194: "acura",
         195: "bmw",
-        196: "ferrari"
+        196: "ferrari",
+        198: "chevrolet",
+        199: "ford",
+        200: "toyota"
     }
 
     return manufacturer_map.get(id, str(id))

@@ -1,5 +1,9 @@
 import asyncio
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
 from _backend.application.session.sessionmanager import SessionManager
 
 async def requestCarLogos():
@@ -51,8 +55,10 @@ async def requestSeriesLogos():
 
 async def downloadAndSaveImage(url, id, type, sessionmanager):
 
-    folderPath = Path().absolute().parent / 'resources' / 'images' / f'{type}_download'
-    imagePath = f"{str(folderPath / id)}.png"
+    folderPath = Path().absolute().parent.parent / 'resources' / 'images' / f'{type}_download'
+    imagePath = (f"{str(folderPath / id)}.png")
+
+    print(imagePath)
 
     response = await sessionmanager.session.get(url)
     image_content = await response.read()
@@ -93,6 +99,11 @@ async def downloadAndSaveSVG(url, id, type, sessionmanager):
     with open(svgPath, 'wb') as f:
         f.write(image_content)
 
-# asyncio.run(requestSeriesLogos())
-# asyncio.run(requestCarLogos())
-# asyncio.run(requestTrackmaps())
+
+if __name__ == "__main__":
+    environment = os.environ.get("APP_ENV", "development")
+    load_dotenv(f"../../.env.{environment}")
+
+    asyncio.run(requestSeriesLogos())
+    # asyncio.run(requestCarLogos())
+    # asyncio.run(requestTrackmaps())

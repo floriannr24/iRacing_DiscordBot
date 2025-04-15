@@ -19,7 +19,7 @@ async def runBackend():
     # sessionManager = await initSessionForDev()
     # await getBoxplotImage(sessionManager, params={"memberId": 817340, "subsession_id": 50745906})
 
-    for x in range(817345, 817350):
+    for x in range(817330, 817350):
         for i in range (1,6):
             sessionManager = await initSessionForDev()
             time.sleep(3)
