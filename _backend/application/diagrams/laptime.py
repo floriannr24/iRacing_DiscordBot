@@ -1,13 +1,11 @@
 import math
 import statistics
 import uuid
-from array import array
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
 
 import numpy as np
-from jinja2.filters import prepare_select_or_reject
 from matplotlib import pyplot as plt, patches
 
 from _backend.application.diagrams.diagram import Diagram

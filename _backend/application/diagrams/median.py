@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import patches
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib.patches import Ellipse
 from matplotlib.ticker import FuncFormatter
 from skimage.transform import resize
 
@@ -68,11 +69,13 @@ class MedianDiagram(Diagram):
 
         self.setGrid()
 
+        # self.markSelfAsDot(self.userDriverIndex)
+
         self.colorNegativeDelta()
         self.colorPositiveDelta()
 
         if self.showFakeName:
-            displayName = "----- Yourself ---->"
+            displayName = "----- You ---->"
             self.replaceName(self.userDriverIndex, displayName)
 
         self.highlightDrivername(self.userDriverIndex)
@@ -104,12 +107,14 @@ class MedianDiagram(Diagram):
 
     def calcPxHeight(self, driverNames):
         numberOfDrivers = len(driverNames)
-        heightPerDriver = 35
+        headerAndFooter = 194 # header (158px) + footer (38px)
 
         if numberOfDrivers < 12:
-            px_height = heightPerDriver * 13
+            heightPerDriver = 35
+            px_height = headerAndFooter + heightPerDriver * numberOfDrivers
         else:
-            px_height = heightPerDriver * numberOfDrivers
+            heightPerDriver = 26
+            px_height = headerAndFooter + heightPerDriver * numberOfDrivers
 
         return px_height
 
@@ -216,10 +221,10 @@ class MedianDiagram(Diagram):
         imgs = readCarLogoImages(self.carIds)
         for i, im in enumerate(imgs):
 
-            oi = OffsetImage(im, zoom=0.04, resample=True)
-            oi.image.axes = self.ax3
-            ab = AnnotationBbox(oi,
-                            (0,i+0.3),
+            offsetImage = OffsetImage(im, zoom=0.035, resample=True)
+            offsetImage.image.axes = self.ax3
+            ab = AnnotationBbox(offsetImage,
+                            (0, i+0.3),
                                 frameon=False,
                                 box_alignment=(1.25, 1.3)
                                 )
@@ -336,10 +341,7 @@ class MedianDiagram(Diagram):
 
     def getImagePath(self):
         imagePath = Path().absolute() / 'output'
-        subsession = str(self.subsessionId)
-        userid = str(self.data["metadata"]["user_driver_id"])
-        figureName = f"median_{subsession}_{userid}.png"
-        # figureName = f"median_{str(uuid.uuid4())}.png"
+        figureName = f"median_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location
 
@@ -377,7 +379,13 @@ class MedianDiagram(Diagram):
 
     def setGrid(self):
         self.ax1.grid(visible=False)
-        self.ax1.grid(color=self.ax_gridlines_color, axis="x", zorder=0)
+
+        # repaint all vertical gridlines, apart from line at x=0
+        xticks = self.ax1.get_xticks()
+        for xtick in xticks:
+            if xtick != 0:
+                self.ax1.axvline(x=xtick, color=self.ax_gridlines_color, linestyle='-', alpha=1, zorder=0, linewidth=0.8)
+
         self.ax1.axvline(0, color=self.text_color, linewidth=0.5)
 
     def limitYAxis(self):
@@ -500,3 +508,16 @@ class MedianDiagram(Diagram):
 
     def getTrackId(self, data):
         return data["metadata"]["track_id"]
+
+    def markSelfAsDot(self, userdriverindex):
+        x0, y0 = self.ax1.transAxes.transform((0, 0))  # lower left in pixels
+        x1, y1 = self.ax1.transAxes.transform((1, 1))  # upper right in pixes
+        dx = x1 - x0
+        dy = y1 - y0
+        maxd = max(dx, dy)
+        radius = 0.2
+        width = radius * maxd / dx
+        height = radius * maxd / dy
+
+        ellipse = Ellipse((0.02, userdriverindex+1), width, height, color=self.text_color, zorder=1, alpha=1.0)
+        self.ax1.add_patch(ellipse)

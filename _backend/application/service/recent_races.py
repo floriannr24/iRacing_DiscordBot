@@ -1,4 +1,3 @@
-import asyncio
 import os
 
 from _backend.application.session.sessionmanager import SessionManager, checkForBadServerResponse

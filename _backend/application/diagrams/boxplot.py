@@ -75,7 +75,7 @@ class BoxplotDiagram(Diagram):
             self.drawLaptimes()
 
         if self.showFakeName:
-            displayName = "----- Yourself ---->"
+            displayName = "----- You ---->"
             self.replaceName(self.userDriverIndex, displayName)
 
         self.drivername_bold(self.userDriverIndex)
@@ -351,10 +351,7 @@ class BoxplotDiagram(Diagram):
 
     def getImagePath(self):
         imagePath = Path().absolute() / 'output'
-        # figureName = f"boxplot_{str(uuid.uuid4())}.png"
-        subsession = str(self.subsessionId)
-        userid = str(self.data["metadata"]["user_driver_id"])
-        figureName = f"boxplot_{subsession}_{userid}.png"
+        figureName = f"boxplot_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location
 

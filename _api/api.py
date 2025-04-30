@@ -71,13 +71,10 @@ async def getMedianImage(sessionManager, params):
 
     return fileLocation
 
-async def getDeltaImage(cookieJar, params):
+async def getDeltaImage(sessionManager, params):
     subsessionId = params.get("subsession_id", None)
     selectedSession = params.get("selected_session", None)
     userId = params.get("memberId", None)
-
-    sessionManager = SessionManager()
-    sessionManager.newSession(cookieJar)
 
     if not subsessionId:
         subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
@@ -91,6 +88,7 @@ async def getDeltaImage(cookieJar, params):
         saveSessionToDatabase(userId, subsessionId, data)
 
     fileLocation = DeltaDiagram(data, params).draw()
+
     return fileLocation
 
 async def getLaptimeImage(**kwargs):

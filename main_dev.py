@@ -1,9 +1,4 @@
 import asyncio
-import time
-from http.cookiejar import CookieJar
-
-from importlib_metadata import pass_none
-
 from _api.api import getDeltaImage, getBoxplotImage, getMedianImage
 from _backend.application.session.sessionmanager import SessionManager
 from _backend.application.utils.publicappexception import PublicAppException
@@ -14,24 +9,24 @@ from dotenv import load_dotenv
 
 async def runBackend():
 
-    #817338 -4
+    sessionManager = await initSessionForDev()
+    await getBoxplotImage(sessionManager, params={"memberId": 817320, "selected_session": -1, "show_laptimes": True})
+    # await getMedianImage(None, params={"memberId": 817346, "subsession_id": 50967190, "max_seconds": 10})
+    # await getMedianImage(None, params={"memberId": 817346, "subsession_id": 50826694})
 
-    # sessionManager = await initSessionForDev()
-    # await getBoxplotImage(sessionManager, params={"memberId": 817340, "subsession_id": 50745906})
-
-    for x in range(817330, 817350):
-        for i in range (1,6):
-            sessionManager = await initSessionForDev()
-            time.sleep(3)
-            try:
-                print(x, -i)
-                await getBoxplotImage(sessionManager, params={"memberId": x, "selected_session": -i})
-            except PublicAppException as e:
-                time.sleep(2)
-                break
-            finally:
-                if sessionManager.session and not sessionManager.session.closed:
-                    await sessionManager.session.close()
+    # for x in range(817330, 817350):
+    #     for i in range (1,6):
+    #         sessionManager = await initSessionForDev()
+    #         time.sleep(3)
+    #         try:
+    #             print(x, -i)
+    #             await getBoxplotImage(sessionManager, params={"memberId": x, "selected_session": -i})
+    #         except PublicAppException as e:
+    #             time.sleep(2)
+    #             break
+    #         finally:
+    #             if sessionManager.session and not sessionManager.session.closed:
+    #                 await sessionManager.session.close()
 
 async def initSessionForDev():
     sessionManager = SessionManager()

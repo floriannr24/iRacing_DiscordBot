@@ -1,6 +1,4 @@
-import json
 import os
-from pathlib import Path
 
 from _backend.application.session.sessionmanager import SessionManager, checkForBadServerResponse
 from dev.devutils.localData import saveToJson, loadFromJson

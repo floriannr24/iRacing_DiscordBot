@@ -1,9 +1,10 @@
-import asyncio
 import statistics
+
 from _backend.application.service.laps_multi import requestLapsMulti
 from _backend.application.service.results_multi import requestResultsMulti
 from _backend.application.session.sessionmanager import SessionManager
 from _backend.application.utils.publicappexception import PublicAppException
+
 
 class Dataprocessor:
     def __init__(self):

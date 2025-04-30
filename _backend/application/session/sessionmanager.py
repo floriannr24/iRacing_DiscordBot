@@ -1,13 +1,12 @@
-import hashlib
 import base64
-import json
+import hashlib
 import os
 from datetime import datetime
-from pathlib import Path
 
 import aiohttp
 
 from _backend.application.utils.publicappexception import PublicAppException
+
 
 class SessionManager:
     def __init__(self):
