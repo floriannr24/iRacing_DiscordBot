@@ -14,12 +14,16 @@ def createDatabase():
                 "discordId INTEGER PRIMARY KEY"
                 ")")
 
+    print("'members' created")
+
     cur.execute("CREATE TABLE sessions ("
                 "custId INTEGER, "
                 "sessionId INTEGER, "
                 "data TEXT, "
                 "PRIMARY KEY (custId, sessionId)"
                 ")")
+
+    print("'sessions' created")
 
 
 if __name__ == "__main__":
