@@ -1,10 +1,11 @@
 import asyncio
-from _api.api import getDeltaImage, getBoxplotImage, getMedianImage
-from _backend.application.session.sessionmanager import SessionManager
-from _backend.application.utils.publicappexception import PublicAppException
-from _bot.bot import DiscordBot
 import os
+
 from dotenv import load_dotenv
+
+from _api.api import getBoxplotImage
+from _backend.application.session.sessionmanager import SessionManager
+from _bot.bot import DiscordBot
 
 
 async def runBackend():
@@ -36,22 +37,15 @@ async def initSessionForDev():
 
 if __name__ == "__main__":
 
-    # Determine .env (defaults to development)
-    environment = os.environ.get("APP_ENV", "development")
-    load_dotenv(f".env.{environment}")
+    foundConfig = load_dotenv(".env.development")
 
     _DISABLE_DISCORD_FRONTEND = os.environ.get("DISABLE_DISCORD_FRONTEND", False) == "True"
 
-    if environment == "development":
-
+    if foundConfig:
         if _DISABLE_DISCORD_FRONTEND:
             asyncio.run(runBackend())
         else:
             bot = DiscordBot()
             bot.run()
-
-    elif environment == "production":
-        bot = DiscordBot()
-        bot.run()
     else:
-        raise Exception("No run config found")
+        raise Exception("No development run config found")
