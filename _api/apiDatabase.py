@@ -1,10 +1,11 @@
+import json
 import os
 import sqlite3
-import json
+
 
 class apiDatabase:
     def __init__(self):
-        self.location = "./database/bot.db"
+        self.location = "./database/bot_prod.db"
         self._BOXED = os.environ.get("BOXED", False) == "True"
         self._DISABLE_CACHE_SESSION = os.environ.get("DISABLE_CACHE_SESSION", False) == "True"
 
