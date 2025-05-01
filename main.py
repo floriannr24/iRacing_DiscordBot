@@ -10,8 +10,7 @@ if __name__ == "__main__":
     # Determine .env (defaults to development)
     environment = os.environ.get("APP_ENV", "development")
 
-    load_dotenv(Path().absolute() / f".env.{environment}")
-
+    load_dotenv(Path().absolute() / f".env.{environment}", override=True)
     if environment == "production":
 
         for key, value in os.environ.items():
