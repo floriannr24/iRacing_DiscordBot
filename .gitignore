@@ -134,7 +134,7 @@ dist
 /dev/reference/
 /dev/boxedData/
 
-/database/bot1.db
+/database/bot.db
 /database/bot_prod.db
 
 .env.*
