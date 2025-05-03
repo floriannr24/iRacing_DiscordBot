@@ -1,4 +1,3 @@
-import math
 import os
 import statistics
 import uuid
@@ -13,42 +12,25 @@ from matplotlib.patches import Ellipse
 from matplotlib.ticker import FuncFormatter
 from skimage.transform import resize
 
-from _backend.application.diagrams.diagram import Diagram
-from _backend.application.diagrams.images.imageLoader import readCarLogoImages, readSeriesLogoImage
+from _backend.diagrams.diagram import Diagram
+from _backend.diagrams.images.imageLoader import readCarLogoImages, readSeriesLogoImage
+from _backend.services.median import MedianData
+from _backend.services.median import MedianOptions
+
 
 class MedianDiagram(Diagram):
-    def __init__(self, originalData, params):
+    def __init__(self, medianData: MedianData, medianOptions: MedianOptions):
 
+        # env variables
         self._SHOW_IMAGE_ON_SYSTEM = os.environ.get("SHOW_IMAGE_ON_SYSTEM", False) == "True"
         self._DISABLE_DISCORD_FRONTEND = os.environ.get("DISABLE_DISCORD_FRONTEND", False) == "True"
 
-        # settings
-        self.maxSeconds = params.get('max_seconds', None)
-        self.showFakeName = not params.get('show_real_name', None)
-        self.showDiscDisq = params.get('show_discdisq', None)
-
         # data
-        self.data = self.prepareData(originalData, self.showDiscDisq)
-        self.laps = self.getLaps(self.data)
-        self.finishPositions = self.getFinishPositions(self.data)
-        self.driverNames = self.getDriverNames(self.data)
-        self.userDriverName = self.getUserDriverName(self.data)
-        self.userDriverIndex = self.getUserDriverIndex(self.driverNames, self.userDriverName)
-        self.seriesName = self.getSeriesName(self.data)
-        self.sof =  self.getSof(self.data)
-        self.track = self.getTrack(self.data)
-        self.trackId = self.getTrackId(self.data)
-        self.sessionTime = self.getSessionTime(self.data)
-        self.carIds = self.getCarIds(self.data)
-        self.seriesId = self.getSeriesId(self.data)
-        self.subsessionId = self.getSubsessionId(self.data)
-        self.medians = self.getMedian(self.data)
-        self.medianDeltas = self.getMedianDelta(self.data, self.userDriverIndex) # x-Axis
-        self.medianDeltaRunning = self.getMedianDeltaRunning(self.data, self.userDriverIndex)
-        self.isRainySession = self.getRainInfo(self.data)
+        self.data = medianData
+        self.options = medianOptions
 
         self.px_width = 900
-        self.px_height = self.calcPxHeight(self.driverNames)
+        self.px_height = self.calcPxHeight(self.data.driverNames)
         super().__init__(self.px_width, self.px_height)
 
     def draw(self):
@@ -56,16 +38,17 @@ class MedianDiagram(Diagram):
         self.barplot = self.drawBarplot()
 
         # format boxplot
-        xMin, xMax = self.calculateXMinMax(self.medianDeltaRunning)
+        xMin = self.data.xMin
+        xMax = self.data.xMax
 
-        if self.maxSeconds:
-            xMax = abs(self.maxSeconds)
+        if not self.options.maxSeconds is None:
+            xMax = abs(self.options.maxSeconds)
 
         self.limitXAxis(xMin, xMax)
         self.limitYAxis()
 
         self.setXLabels()
-        self.setYLabels(self.driverNames)
+        self.setYLabels()
 
         self.setGrid()
 
@@ -74,11 +57,10 @@ class MedianDiagram(Diagram):
         self.colorNegativeDelta()
         self.colorPositiveDelta()
 
-        if self.showFakeName:
-            displayName = "----- You ---->"
-            self.replaceName(self.userDriverIndex, displayName)
+        if self.options.showFakeName:
+            self.replaceName()
 
-        self.highlightDrivername(self.userDriverIndex)
+        self.highlightDrivername()
         self.colorDISCDISQ()
 
         plt.tight_layout()
@@ -101,9 +83,6 @@ class MedianDiagram(Diagram):
             plt.close()
 
         return imagePath
-
-    def getDriverNames(self, data):
-        return [driver["name"] for driver in data["drivers"]]
 
     def calcPxHeight(self, driverNames):
         numberOfDrivers = len(driverNames)
@@ -155,7 +134,10 @@ class MedianDiagram(Diagram):
         self.fig.text(0.91, text0YPos, "Median", color=self.text_color, horizontalalignment="left", fontsize=fontsize, fontweight=fontweight)
         self.fig.add_artist(patches.Rectangle((plotPosition.x1 + deltaPos, rect0YPos), 1 - deltaPos, rectHeight, facecolor=color2))
 
-    def highlightDrivername(self, index):
+    def highlightDrivername(self):
+
+        index = self.data.userDriverIndex
+
         labelax1 = self.ax1.get_yticklabels()[index]
         labelax1.set_fontweight(1000)
         labelax1.set_color(self.text_highlight_color)
@@ -167,12 +149,6 @@ class MedianDiagram(Diagram):
         labelax5 = self.ax5.get_yticklabels()[index]
         labelax5.set_color(self.text_highlight_color)
 
-    def getLaps(self, data):
-        return [driver["laps"] for driver in data["drivers"]]
-
-    def getMedian(self, data):
-        return [driver["median"] for driver in data["drivers"]]
-
     def setXLabels(self):
         self.ax1.xaxis.set_major_locator(plt.MaxNLocator(nbins=12, steps=[1, 2, 2.5, 5, 10]))
         formatter = FuncFormatter(self.formatCustomTickLabels)
@@ -181,10 +157,8 @@ class MedianDiagram(Diagram):
 
     def drawBarplot(self):
 
-        xMedians = [0 if x == None else x for x in self.medianDeltas]
-
-        barplot = self.ax1.barh(y=1+np.arange(len(self.driverNames)),
-                                width=xMedians,
+        barplot = self.ax1.barh(y=1 + np.arange(len(self.data.driverNames)),
+                                width=self.data.xMedians,
                                 zorder=2,
                                 height=0.7,
                                 )
@@ -195,7 +169,11 @@ class MedianDiagram(Diagram):
     def limitXAxis(self, ymin, ymax):
         self.ax1.set(xlim=(ymin, ymax))
 
-    def setYLabels(self, driverNames):
+    def setYLabels(self):
+
+        driverNames = self.data.driverNames
+        carIds = self.data.carIds
+        finishPositions = self.data.finishPositions
 
         Ax1PaddingToPlot = 27 # finish pos
         Ax2PaddingToAx1 = 35 # name
@@ -204,21 +182,24 @@ class MedianDiagram(Diagram):
         self.ax1.spines.left.set_position(('outward', Ax1PaddingToPlot))
         self.ax1.spines['left'].set_visible(False)
         self.ax1.tick_params(axis="y", size=0)
-        self.ax1.set_yticks([i for i in range(1, len(self.driverNames)+1)], self.finishPositions, color=self.text_color, fontsize="11")
+        self.ax1.set_yticks([i for i in range(1, len(driverNames) + 1)], finishPositions, color=self.text_color,
+                            fontsize="11")
 
         # driver names
         self.ax2 = self.ax1.secondary_yaxis(location=0)
         self.ax2.spines.left.set_position(('outward', Ax1PaddingToPlot + Ax2PaddingToAx1))
         self.ax2.spines['left'].set_visible(False)
         self.ax2.tick_params(axis="y", size=0)
-        self.ax2.set_yticks([i for i in range(1, len(self.driverNames)+1)], driverNames, ha="right", color=self.text_color, fontsize="11")
+        self.ax2.set_yticks([i for i in range(1, len(driverNames) + 1)], driverNames, ha="right", color=self.text_color,
+                            fontsize="11")
 
         # car logos
         self.ax3 = self.ax1.secondary_yaxis(location=0)
         self.ax3.spines['left'].set_visible(False)
-        self.ax3.set_yticks([i for i in range(1, len(self.driverNames) + 1)], ["" for i in range(1, len(self.driverNames) + 1)], color=self.text_color)
+        self.ax3.set_yticks([i for i in range(1, len(driverNames) + 1)], ["" for i in range(1, len(driverNames) + 1)],
+                            color=self.text_color)
         self.ax3.tick_params(axis="y", color=self.text_color)
-        imgs = readCarLogoImages(self.carIds)
+        imgs = readCarLogoImages(carIds)
         for i, im in enumerate(imgs):
 
             offsetImage = OffsetImage(im, zoom=0.035, resample=True)
@@ -231,7 +212,7 @@ class MedianDiagram(Diagram):
             self.ax3.add_artist(ab)
 
         # relative deltas to median
-        medianDeltas_str = self.formatMedianDeltas(self.data, self.userDriverIndex)  # 1st y-Axis right
+        medianDeltas_str = self.data.medianDeltas_str  # 1st y-Axis right
         self.ax4 = self.ax1.secondary_yaxis(location=1)
         self.ax4.spines['left'].set_visible(False)
         self.ax4.spines.left.set_position(('outward', -52))
@@ -239,7 +220,7 @@ class MedianDiagram(Diagram):
         self.ax4.set_yticks([i for i in range(1, len(medianDeltas_str) + 1)], medianDeltas_str, color=self.text_color, fontsize="11", ha="right")
 
         # medians
-        medians_str = self.formatMedians(self.medians)  # 2nd y-Axis right
+        medians_str = self.data.medians_str  # 2nd y-Axis right
         self.ax5 = self.ax1.secondary_yaxis(location=1)
         self.ax5.spines['left'].set_visible(False)
         self.ax5.spines.left.set_position(('outward', -120))
@@ -248,7 +229,7 @@ class MedianDiagram(Diagram):
 
     def colorDISCDISQ(self):
         indices = []
-        for i, value in enumerate(self.finishPositions):
+        for i, value in enumerate(self.data.finishPositions):
             if value == "DISC" or value == "DISQ":
                 indices.append(i)
 
@@ -262,8 +243,8 @@ class MedianDiagram(Diagram):
         y1 = None
 
         try:
-            index = self.driverNames.index("Florian Niedermeier2")
-            user_boxplot_data = self.laps[index]
+            index = self.data.userDriverIndex
+            user_boxplot_data = self.data.laps[index]
             user_median = statistics.median(user_boxplot_data)
             y1 = [user_median, user_median]
             x1 = [0, 100]
@@ -272,18 +253,6 @@ class MedianDiagram(Diagram):
             pass
 
         plt.plot(x1, y1, zorder=3, linestyle="dashed", color="#C2C5CA")
-
-    def calculateXMinMax(self, medianDelta):
-        largestNegativeDelta = min(medianDelta)
-        xMin = self.roundDown(largestNegativeDelta)
-
-        if xMin >= -0.5:
-            xMin = xMin - 0.5
-
-        largestPositiveDelta = max(medianDelta)
-        xMax = self.roundUp(largestPositiveDelta)
-
-        return xMin, xMax
 
     def calculateSecondsStr(self, number_of_seconds_shown):
         yticks = []
@@ -299,59 +268,24 @@ class MedianDiagram(Diagram):
 
         return yticks
 
-    def getSeriesName(self, data):
-        return data["metadata"]["series_name"]
-
-    def getFinishPositions(self, data):
-        return [driver["finish_position_in_class"] for driver in data["drivers"]]
-
-    def getCarIds(self, data):
-        return [driver["car_id"] for driver in data["drivers"]]
-
-    def roundDown(self, delta):
-        # round down to the next 0.5 step
-        return math.floor(delta * 2) / 2
-
-    def getUserDriverName(self, data):
-        return data["metadata"]["user_driver_name"]
-
-    def getSof(self, data):
-        return data["metadata"]["sof"]
-
-    def getTrack(self, data):
-        return data["metadata"]["track"]
-
-    def getSessionTime(self, data):
-        return data["metadata"]["session_time"]
-
     def getRunningLaps(self, data):
         # all laps of drivers whose final status is not "Disqualified" or "Disconnected"
         return [driver["laps"] for driver in data["drivers"] if driver["result_status"] == "Running"]
 
-    def replaceName(self, index, displayName):
+    def replaceName(self):
+
+        index = self.data.userDriverIndex
+        displayName = self.data.displayName
+
         labels = [item.get_text() for item in self.ax2.get_yticklabels()]
         labels[index] = displayName
         self.ax2.set_yticklabels(labels)
-
-    def getUserDriverIndex(self, driverNames, name):
-        return driverNames.index(name)
-
-    def getSubsessionId(self, data):
-        return data["metadata"]["subsession_id"]
 
     def getImagePath(self):
         imagePath = Path().absolute() / 'output'
         figureName = f"median_{str(uuid.uuid4())}.png"
         location = str(imagePath / figureName)
         return location
-
-    def getMedianDelta(self, data, userIndex):
-        medians = [0 if driver["median"] == None else driver["median"] for driver in data["drivers"]]
-        userMedianVal = medians[userIndex]
-        return [self.calcMedianDeltaToUserDriver(x, userMedianVal) for x in medians]
-
-    def calcMedianDeltaToUserDriver(self, medianVal, userMedianVal):
-        return round(medianVal-userMedianVal, 3)
 
     def colorNegativeDelta(self):
         for medianDelta in self.barplot:
@@ -362,20 +296,6 @@ class MedianDiagram(Diagram):
         for medianDelta in self.barplot:
             if medianDelta.get_width() > 0:
                 medianDelta.set_facecolor("green")
-
-    def getMedianDeltaRunning(self, data, userIndex):
-        medianDeltas = [driver["median"] for driver in data["drivers"] if driver["result_status"] == "Running"]
-
-        if userIndex > len(medianDeltas)-1:
-            userMedianVal = 0 # if userdriver has disq/disc
-        else:
-            userMedianVal = medianDeltas[userIndex]
-
-        return [self.calcMedianDeltaToUserDriver(x, userMedianVal) for x in medianDeltas]
-
-    def roundUp(self, delta):
-        # round down to the next 0.5 step
-        return math.ceil(delta * 2) / 2
 
     def setGrid(self):
         self.ax1.grid(visible=False)
@@ -389,7 +309,7 @@ class MedianDiagram(Diagram):
         self.ax1.axvline(0, color=self.text_color, linewidth=0.5)
 
     def limitYAxis(self):
-        self.ax1.set(ylim=(len(self.driverNames)+0.7, 0.3))
+        self.ax1.set(ylim=(len(self.data.driverNames) + 0.7, 0.3))
 
     def formatLaptime(self, medianLaptime):
         if medianLaptime:
@@ -400,33 +320,6 @@ class MedianDiagram(Diagram):
             return td_minutes
         else:
             return "N/A"
-
-    def formatMedianDeltas(self, data, userIndex):
-        medians = [driver["median"] for driver in data["drivers"]]
-        userMedianVal = medians[userIndex]
-
-        if userMedianVal == None:
-            userMedianVal = 0
-
-        deltas = [None if x == None else self.calcMedianDeltaToUserDriver(x, userMedianVal) for x in medians]
-        return [self.formatDelta(x) for x in deltas]
-
-    def formatMedians(self, medians):
-        return [self.formatLaptime(x) for x in medians]
-
-    def formatDelta(self, delta):
-
-        if delta == None:
-            value = "N/A"
-        else:
-            if delta < 0:
-                value = str(f"{delta:.3f}")
-            elif delta > 0:
-                value = str(f"+{delta:.3f}")
-            else:
-                value = ""
-
-        return value
 
     def convertPtToFigureCoords(self, points):
         fig_width_inches = self.fig.get_size_inches()[0]
@@ -448,7 +341,7 @@ class MedianDiagram(Diagram):
     def setHeaderImages(self):
 
         # series
-        seriesImg = readSeriesLogoImage(self.seriesId)
+        seriesImg = readSeriesLogoImage(self.data.seriesId)
 
         if not seriesImg is None:
 
@@ -486,28 +379,28 @@ class MedianDiagram(Diagram):
         #
         # self.fig.figimage(seriesImg, xo=10, yo=top, zorder=3)
 
-    def getSeriesId(self, data):
-        return data["metadata"]["series_id"]
-
     def setHeaderText(self):
         locationSeriesNameY0 = 1-self.convertPixelsToFigureCoords(35)
         space = self.convertPixelsToFigureCoords(25)
 
-        self.fig.text(0.5, locationSeriesNameY0,  self.seriesName, fontsize=16, fontweight="1000", color=self.text_color, horizontalalignment="center")
-        self.fig.text(0.5, locationSeriesNameY0-space, self.track, color=self.text_color, horizontalalignment="center")
-        self.fig.text(0.5, locationSeriesNameY0-space*2, f"{self.sessionTime} | SOF: {self.sof}", color=self.text_color, horizontalalignment="center")
-        self.fig.text(0.5, locationSeriesNameY0-space*3, f"ID: {self.subsessionId}", color=self.text_color, horizontalalignment="center")
+        seriesName = self.data.seriesName
+        track = self.data.trackName
+        sessionTime = self.data.sessionTime
+        sof = self.data.sof
+        subsessionId = self.data.subsessionId
+
+        self.fig.text(0.5, locationSeriesNameY0, seriesName, fontsize=16, fontweight="1000", color=self.text_color,
+                      horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space, track, color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space * 2, f"{sessionTime} | SOF: {sof}", color=self.text_color,
+                      horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space * 3, f"ID: {subsessionId}", color=self.text_color,
+                      horizontalalignment="center")
 
     def formatCustomTickLabels(self, value, pos):
         intValue = int(value) if value == int(value) else value
         stringValue = f"{intValue}s" if intValue <= 0 else  f"+{intValue}s"
         return stringValue
-
-    def getRainInfo(self, data):
-        return data["metadata"]["is_rainy_session"]
-
-    def getTrackId(self, data):
-        return data["metadata"]["track_id"]
 
     def markSelfAsDot(self, userdriverindex):
         x0, y0 = self.ax1.transAxes.transform((0, 0))  # lower left in pixels

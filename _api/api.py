@@ -1,13 +1,13 @@
 from _api.apiDatabase import apiDatabase
-from _backend.application.dataprocessors.dataprocessor import Dataprocessor
-from _backend.application.diagrams.boxplot import BoxplotDiagram
-from _backend.application.diagrams.delta import DeltaDiagram
-from _backend.application.diagrams.laptime import LaptimeDiagram
-from _backend.application.diagrams.median import MedianDiagram
-from _backend.application.service.driverid_search import searchDriverId
-from _backend.application.service.drivername_search import searchDriverName
-from _backend.application.service.recent_races import requestSubessionId
-from _backend.application.session.sessionmanager import SessionManager
+from _backend.diagrams.boxplot import BoxplotDiagram
+from _backend.diagrams.delta import DeltaDiagram
+from _backend.diagrams.laptime import LaptimeDiagram
+from _backend.iracingapi.apicalls.driverid_search import searchDriverId
+from _backend.iracingapi.apicalls.drivername_search import searchDriverName
+from _backend.iracingapi.apicalls.recent_races import requestSubessionId
+from _backend.iracingapi.dataprocessors.dataprocessor import Dataprocessor
+from _backend.iracingapi.session.sessionmanager import SessionManager
+
 
 async def findAndSaveIdForName(sessionManager: SessionManager, member_name: str, discord_id: int):
     member_id = await searchDriverId(member_name, sessionManager)
@@ -48,26 +48,6 @@ async def getBoxplotImage(sessionManager, params):
         saveSessionToDatabase(userId, subsessionId, data)
 
     fileLocation = BoxplotDiagram(data, params).draw()
-
-    return fileLocation
-
-async def getMedianImage(sessionManager, params):
-    subsessionId = params.get("subsession_id", None)
-    selectedSession = params.get("selected_session", None)
-    userId = params.get("memberId", None)
-
-    if not subsessionId:
-        subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
-
-    dataInDatabase = loadSessionFromDatabase(userId, subsessionId)
-
-    if dataInDatabase:
-        data = dataInDatabase
-    else:
-        data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
-        saveSessionToDatabase(userId, subsessionId, data)
-
-    fileLocation = MedianDiagram(data, params).draw()
 
     return fileLocation
 

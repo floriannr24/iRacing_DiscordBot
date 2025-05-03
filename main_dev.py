@@ -3,15 +3,15 @@ import os
 
 from dotenv import load_dotenv
 
-from _api.api import getBoxplotImage
-from _backend.application.session.sessionmanager import SessionManager
+from _api.api import getDeltaImage
+from _backend.iracingapi.session.sessionmanager import SessionManager
 from _bot.bot import DiscordBot
 
 
 async def runBackend():
 
     sessionManager = await initSessionForDev()
-    await getBoxplotImage(sessionManager, params={"memberId": 817320, "selected_session": -1, "show_laptimes": True})
+    await getDeltaImage(sessionManager, params={"memberId": 817320, "selected_session": -1, "show_laptimes": True})
     # await getMedianImage(None, params={"memberId": 817346, "subsession_id": 50967190, "max_seconds": 10})
     # await getMedianImage(None, params={"memberId": 817346, "subsession_id": 50826694})
 
@@ -37,11 +37,11 @@ async def initSessionForDev():
 
 if __name__ == "__main__":
 
-    foundConfig = load_dotenv(".env.development")
+    configFound = load_dotenv(".env.development")
 
     _DISABLE_DISCORD_FRONTEND = os.environ.get("DISABLE_DISCORD_FRONTEND", False) == "True"
 
-    if foundConfig:
+    if configFound:
         if _DISABLE_DISCORD_FRONTEND:
             asyncio.run(runBackend())
         else:

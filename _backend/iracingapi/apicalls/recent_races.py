@@ -1,7 +1,7 @@
 import os
 
-from _backend.application.session.sessionmanager import SessionManager, checkForBadServerResponse
-from _backend.application.utils.publicappexception import PublicAppException
+from _backend.iracingapi.session.sessionmanager import SessionManager, checkForBadServerResponse
+from _backend.iracingapi.utils.publicappexception import PublicAppException
 from dev.devutils.localData import saveToJson, loadFromJson
 
 

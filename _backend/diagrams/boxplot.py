@@ -11,8 +11,8 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.ticker import FuncFormatter
 from skimage.transform import resize
 
-from _backend.application.diagrams.diagram import Diagram
-from _backend.application.diagrams.images.imageLoader import readCarLogoImages, readSeriesLogoImage
+from _backend.diagrams.diagram import Diagram
+from _backend.diagrams.images.imageLoader import readCarLogoImages, readSeriesLogoImage
 
 
 class BoxplotDiagram(Diagram):

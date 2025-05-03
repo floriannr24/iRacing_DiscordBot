@@ -1,0 +1,4 @@
+class BoxplotData:
+    data = None
+
+

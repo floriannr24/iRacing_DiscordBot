@@ -1,14 +1,18 @@
 import asyncio
 import os
 import time
+
 import discord
+import discord.app_commands
 from discord import app_commands
 from discord.ext import commands, tasks
-import discord.app_commands
-from _api.api import getMedianImage, getBoxplotImage, getDeltaImage, findNameAndSaveIdForId, findAndSaveIdForName
+
+from _api.api import getBoxplotImage, getDeltaImage, findNameAndSaveIdForId, findAndSaveIdForName
 from _api.apiDatabase import apiDatabase
-from _backend.application.diagrams.delta import ReferenceMode, SelectionMode
-from _backend.application.session.sessionmanager import SessionManager
+from _backend.diagrams.delta import ReferenceMode, SelectionMode
+from _backend.iracingapi.session.sessionmanager import SessionManager
+from _backend.services.median.MedianOptions import MedianOptions
+from _backend.services.median.MedianService import MedianService
 from _bot import botUtils
 from _bot.botUtils import start_timer, end_timer, closeSession
 
@@ -57,7 +61,8 @@ class DiscordBot():
         self.bot.run(self.token)
 
     def cmdRegister(self):
-        @self.bot.tree.command(name="register", description="Enter your 'iracing_name' OR your 'iracing_id' to use the bot.")
+        @self.bot.tree.command(name="register_account",
+                               description="Enter your 'iracing_name' OR your 'iracing_id' to use the bot.")
         @app_commands.describe(
             iracing_name="Your iRacing name.",
             iracing_id="Your iRacing member id."
@@ -98,7 +103,7 @@ class DiscordBot():
                 await closeSession(sessionManager)
 
     def cmdDelete(self):
-        @self.bot.tree.command(name="delete", description="Delete your user from the bot.")
+        @self.bot.tree.command(name="delete_account", description="Delete your user from the bot.")
         async def register(interaction: discord.Interaction):
 
             sessionManager = SessionManager()
@@ -218,8 +223,11 @@ class DiscordBot():
                 # image response
                 await interaction.response.defer()
 
-                params = {"memberId": memberIdDatabase, "selected_session": selected_session, "subsession_id": subsession_id, "show_real_name": show_real_name, "show_discdisq": show_discdisq, "max_seconds": max_seconds}
-                imagefileLocation = await asyncio.wait_for(getMedianImage(sessionManager, params), 20)
+                params = {"memberId": memberIdDatabase, "selected_session": selected_session,
+                          "subsession_id": subsession_id}
+                options = MedianOptions(max_seconds, show_real_name, show_discdisq)
+                imagefileLocation = await asyncio.wait_for(
+                    MedianService().getMedianImage(sessionManager, params, options), 20)
 
                 file = discord.File(imagefileLocation)
                 await interaction.followup.send(file=file)

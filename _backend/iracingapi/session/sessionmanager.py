@@ -5,7 +5,7 @@ from datetime import datetime
 
 import aiohttp
 
-from _backend.application.utils.publicappexception import PublicAppException
+from _backend.iracingapi.utils.publicappexception import PublicAppException
 
 
 class SessionManager:

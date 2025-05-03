@@ -3,11 +3,13 @@ import os
 import time
 import traceback
 from enum import Enum
+
 import discord
 from discord import app_commands
 
-from _backend.application.session.sessionmanager import SessionManager
-from _backend.application.utils.publicappexception import PublicAppException
+from _backend.iracingapi.session.sessionmanager import SessionManager
+from _backend.iracingapi.utils.publicappexception import PublicAppException
+
 
 class Messages(Enum):
     ERROR_NO_MEMBER_ID_FOUND = discord.Embed(title="❌ Error",
@@ -75,7 +77,6 @@ async def end_timer(start_time):
         print(f"{execution_time:.2f} seconds")
     else:
         return
-
 
 async def start_timer():
     _TIMING = os.environ.get("TIMING") == "True"

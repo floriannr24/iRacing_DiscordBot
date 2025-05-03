@@ -1,9 +1,9 @@
 import statistics
 
-from _backend.application.service.laps_multi import requestLapsMulti
-from _backend.application.service.results_multi import requestResultsMulti
-from _backend.application.session.sessionmanager import SessionManager
-from _backend.application.utils.publicappexception import PublicAppException
+from _backend.iracingapi.apicalls.laps_multi import requestLapsMulti
+from _backend.iracingapi.apicalls.results_multi import requestResultsMulti
+from _backend.iracingapi.session.sessionmanager import SessionManager
+from _backend.iracingapi.utils.publicappexception import PublicAppException
 
 
 class Dataprocessor:
@@ -115,17 +115,18 @@ class Dataprocessor:
         intDict = {
             "name": driver_name,
             "id": driver_id,
-            "finish_position_in_class": self.set_finishPositionInClass(driver_id),
-            "result_status": self.set_resultStatus(driver_id),
-            "laps_completed": self.set_lapsCompleted(list_of_positions),
+            "finish_position_in_class": self.get_finishPositionInClass(driver_id),
+            "start_position_in_class": self.get_startPositionInClass(driver_id),
+            "result_status": self.get_resultStatus(driver_id),
+            "laps_completed": self.get_lapsCompleted(list_of_positions),
             "laps": laps,
-            "car_class_name": self.set_carClass(driver_id)["name"],
-            "car_id": self.set_carId(driver_id),
-            "personal_best": self.set_fastestPersonalLap(driver_id),
-            "fastest_lap": self.set_ifDriverSetFastestLapInSession(driver_id),
-            "irating": self.set_iRating(driver_id),
+            "car_class_name": self.get_carClass(driver_id)["name"],
+            "car_id": self.get_carId(driver_id),
+            "personal_best": self.get_fastestPersonalLap(driver_id),
+            "fastest_lap": self.get_ifDriverSetFastestLapInSession(driver_id),
+            "irating": self.get_iRating(driver_id),
             "license": None,
-            "median": self.set_median(laps),
+            "median": self.get_median(laps),
         }
 
         return intDict
@@ -137,10 +138,10 @@ class Dataprocessor:
                 laps_completed_pos.append(record["lap_position"])
         return laps_completed_pos
 
-    def set_lapsCompleted(self, laps_completed_pos):
+    def get_lapsCompleted(self, laps_completed_pos):
         return len(laps_completed_pos) - 1
 
-    def set_resultStatus(self, driver_id):
+    def get_resultStatus(self, driver_id):
         raceSessionResult = self.getRaceSessionResultOfEvent()
 
         for data in raceSessionResult["results"]:
@@ -169,7 +170,7 @@ class Dataprocessor:
 
         return laps
 
-    def set_carClass(self, driver_id):
+    def get_carClass(self, driver_id):
 
         carClass = {}
 
@@ -182,22 +183,35 @@ class Dataprocessor:
 
         return carClass
 
-    def set_finishPositionInClass(self, driver_id):
+    def get_startPositionInClass(self, driver_id):
 
         raceSessionResult = self.getRaceSessionResultOfEvent()
+        startingPositionInClass = -1
 
         for data in raceSessionResult["results"]:
             if data["cust_id"] == driver_id:
-                if data["reason_out"] == "Running":
-                    return data["finish_position_in_class"] + 1
-                else:
-                    return -1
+                startingPositionInClass = data['starting_position_in_class'] + 1
+                break
+
+        return startingPositionInClass
+
+    def get_finishPositionInClass(self, driver_id):
+
+        raceSessionResult = self.getRaceSessionResultOfEvent()
+        finishPositionInClass = -1
+
+        for data in raceSessionResult["results"]:
+            if data["cust_id"] == driver_id and data["reason_out"] == "Running":
+                finishPositionInClass = data["finish_position_in_class"] + 1
+                break
+
+        return finishPositionInClass
 
     def addDriverInfo(self, unique_drivers):
         driverArray = [self.collectInfo(driver) for driver in unique_drivers]
         return driverArray
 
-    def set_ifDriverSetFastestLapInSession(self, driver_id):
+    def get_ifDriverSetFastestLapInSession(self, driver_id):
         return True if self.findUserWithFastestLap(driver_id) else False
 
     def findUserWithFastestLap(self, driver_id):
@@ -205,7 +219,7 @@ class Dataprocessor:
             if driverlap["cust_id"] == driver_id and driverlap["fastest_lap"]:
                 return True
 
-    def set_fastestPersonalLap(self, driver_id):
+    def get_fastestPersonalLap(self, driver_id):
         session_time0 = 0
 
         for i, record in enumerate(self.iRacing_lapdata):
@@ -227,7 +241,7 @@ class Dataprocessor:
     def getSeriesName(self):
         return self.iRacing_results["series_name"]
 
-    def set_carId(self, driver_id):
+    def get_carId(self, driver_id):
         for data in self.iRacing_results["session_results"][0]["results"]:
             if data["cust_id"] == driver_id:
                 return data["car_id"]
@@ -258,12 +272,12 @@ class Dataprocessor:
         startTimeFormatted = startTime.replace('T', ' ')[:-4] + " GMT"
         return startTimeFormatted
 
-    def set_iRating(self, driver_id):
+    def get_iRating(self, driver_id):
         for data in self.iRacing_results["session_results"][0]["results"]:
             if data["cust_id"] == driver_id:
                 return data["newi_rating"]
 
-    def set_median(self, laps):
+    def get_median(self, laps):
         if laps:
             return statistics.median(laps)
         else:

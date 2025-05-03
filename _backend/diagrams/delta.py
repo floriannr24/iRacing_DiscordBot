@@ -5,10 +5,12 @@ import uuid
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
+
 import numpy as np
 from matplotlib import pyplot as plt
 
-from _backend.application.diagrams.diagram import Diagram
+from _backend.diagrams.diagram import Diagram
+
 
 class DeltaDiagram(Diagram):
     def __init__(self, originalData, params):
@@ -66,7 +68,7 @@ class DeltaDiagram(Diagram):
 
     def draw(self):
 
-        self.simplePlot = self.drawPlot()
+        self.plot = self.drawPlot()
 
         # format boxplot
         yMin, yMax = self.calculateXMinMax()
@@ -112,7 +114,7 @@ class DeltaDiagram(Diagram):
 
     def getMaxYPosition(self):
         ypos = []
-        for data in self.simplePlot:
+        for data in self.plot:
             yDataArray = data.get_data()[1]
             if len(yDataArray) == self.numberOflaps:
                 pass
@@ -173,7 +175,7 @@ class DeltaDiagram(Diagram):
 
     def userBoxplot_brightBlue(self, index):
         if not self.finishPositions[index] == "DISC" or not self.finishPositions[index] == "DISQ":
-            userBP = self.simplePlot["boxes"][index]
+            userBP = self.plot["boxes"][index]
             userBP.set_facecolor(self.boxplot_user_facecolor)
 
     def highlightUsername(self, index):
@@ -195,12 +197,12 @@ class DeltaDiagram(Diagram):
         return [driver["median"] for driver in data["drivers"]]
 
     def setXLabels(self):
-        self.ax1.set_xticks(np.arange(0, self.numberOflaps))
-        self.ax1.set_xticklabels(np.arange(1, self.numberOflaps+1), fontsize="large", color=self.text_color)
+        self.ax1.set_xticks(np.arange(0, self.numberOflaps + 1))
+        self.ax1.set_xticklabels(np.arange(0, self.numberOflaps + 1), fontsize="large", color=self.text_color)
 
     def drawPlot(self):
 
-        deltas = np.array([driver["deltaToSpecified"] for driver in self.data["drivers"]])
+        deltas = np.array([driver["deltaToTarget"] for driver in self.data["drivers"]])
 
         simplePlot = self.ax1.plot(deltas.T)
         plt.gca().invert_yaxis()
@@ -289,7 +291,7 @@ class DeltaDiagram(Diagram):
                 indicesToColor.append(i)
 
         for driverIndex in indicesToColor:
-            box = self.simplePlot[driverIndex]
+            box = self.plot[driverIndex]
             box.set_color("#6F6F6F")
 
     def draw_medianLine(self):
@@ -311,13 +313,13 @@ class DeltaDiagram(Diagram):
 
     def calculateXMinMax(self):
 
-        deltasAllLaps = np.array([driver["deltaToSpecified"] for driver in self.data["drivers"]]).flatten()
+        deltasAllLaps = np.array([driver["deltaToTarget"] for driver in self.data["drivers"]]).flatten()
         deltasAllLaps = deltasAllLaps[~np.isnan(deltasAllLaps)]
 
         largestNegativeDelta = min(deltasAllLaps)
         yMin = self.roundDown(largestNegativeDelta)
 
-        deltasLastLap = np.array([driver["deltaToSpecified"][self.numberOflaps-1] for driver in self.data["drivers"]])
+        deltasLastLap = np.array([driver["deltaToTarget"][self.numberOflaps - 1] for driver in self.data["drivers"]])
         deltasLastLap = deltasLastLap[~np.isnan(deltasLastLap)]
 
         yMax = np.quantile(deltasAllLaps, 0.9)
@@ -394,12 +396,12 @@ class DeltaDiagram(Diagram):
         return round(medianVal - userMedianVal, 3)
 
     def colorNegativeDelta(self):
-        for medianDelta in self.simplePlot:
+        for medianDelta in self.plot:
             if medianDelta.get_width() < 0:
                 medianDelta.set_facecolor("red")
 
     def colorPositiveDelta(self):
-        for medianDelta in self.simplePlot:
+        for medianDelta in self.plot:
             if medianDelta.get_width() > 0:
                 medianDelta.set_facecolor("green")
 
@@ -492,12 +494,16 @@ class DeltaDiagram(Diagram):
             targetLaps = drivers[0]["laps"]
             drivers = drivers
 
-
         for driver in drivers:
             delta = np.cumsum(np.array(driver["laps"]) - np.array(targetLaps[:len(driver["laps"])]))
             delta = np.pad(delta, (0, len(targetLaps) - len(driver["laps"])), mode='constant', constant_values=None)
             delta = np.ndarray.tolist(delta)
-            driver["deltaToSpecified"] = delta
+            driver["deltaToTarget"] = delta
+
+        for driver in drivers:
+            deltaToTarget = driver["deltaToTarget"]
+            startPos = driver["start_position_in_class"]
+            deltaToTarget.insert(0, (startPos - 1) * 0.5)
 
         data["drivers"] = drivers
 
@@ -512,7 +518,7 @@ class DeltaDiagram(Diagram):
                 indicesToRemove.append(i)
 
         for driverIndex in indicesToRemove:
-            box = self.simplePlot[driverIndex]
+            box = self.plot[driverIndex]
             box.set_color("#6F6F6F")
 
     def getDriverSubset(self, drivers, userDriverIndex, numberOfDrivers):
@@ -529,13 +535,13 @@ class DeltaDiagram(Diagram):
 
 
     def highlightUserLine(self, userDriverIndex):
-        userLine = self.simplePlot[userDriverIndex]
+        userLine = self.plot[userDriverIndex]
         userLine.set_color(self.boxplot_user_facecolor)
         userLine.set_linewidth(2)
         userLine.set(zorder=10)
 
     def colorDrivernames(self):
-        for i, line in enumerate(self.simplePlot):
+        for i, line in enumerate(self.plot):
             color = line.get_c()
             label = self.ax2.get_yticklabels()[i]
             label.set_color(color)

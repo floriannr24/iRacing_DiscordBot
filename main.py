@@ -6,9 +6,9 @@ from _bot.bot import DiscordBot
 
 if __name__ == "__main__":
 
-    foundConfig = load_dotenv(Path().absolute() / ".env.production")
+    configFound = load_dotenv(Path().absolute() / ".env.production")
 
-    if foundConfig:
+    if configFound:
         bot = DiscordBot()
         bot.run()
     else:

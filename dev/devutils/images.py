@@ -4,7 +4,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from _backend.application.session.sessionmanager import SessionManager
+from _backend.iracingapi.session.sessionmanager import SessionManager
+
 
 async def requestCarLogos():
     sessionManager = SessionManager()

@@ -1,6 +1,6 @@
 import os
 
-from _backend.application.session.sessionmanager import SessionManager, checkForBadServerResponse
+from _backend.iracingapi.session.sessionmanager import SessionManager, checkForBadServerResponse
 from dev.devutils.localData import saveToJson, loadFromJson
 
 

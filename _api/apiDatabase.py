@@ -7,7 +7,7 @@ class apiDatabase:
     def __init__(self):
         self.location = "./database/bot_prod.db"
         self._BOXED = os.environ.get("BOXED", False) == "True"
-        self._DISABLE_CACHE_SESSION = os.environ.get("DISABLE_CACHE_SESSION", False) == "True"
+        self._DISABLE_DATABASE_SESSION = os.environ.get("DISABLE_DATABASE_SESSION", False) == "True"
 
     def getMemberIdForDiscordId(self, discordId):
 
@@ -50,7 +50,7 @@ class apiDatabase:
 
     def getSessionDataForUser(self, custId, sessionId):
 
-        if not self._DISABLE_CACHE_SESSION:
+        if not self._DISABLE_DATABASE_SESSION:
 
             con = sqlite3.connect(self.location)
             cur = con.cursor()
@@ -66,7 +66,7 @@ class apiDatabase:
 
     def storeSessionDataForUser(self, custId, sessionId, data) -> None:
 
-        if not self._DISABLE_CACHE_SESSION:
+        if not self._DISABLE_DATABASE_SESSION:
 
             con = sqlite3.connect(self.location)
             cur = con.cursor()
