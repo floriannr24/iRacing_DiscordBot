@@ -1,12 +1,11 @@
 from _api.apiDatabase import apiDatabase
-from _backend.diagrams.boxplot import BoxplotDiagram
-from _backend.diagrams.delta import DeltaDiagram
-from _backend.diagrams.laptime import LaptimeDiagram
 from _backend.iracingapi.apicalls.driverid_search import searchDriverId
 from _backend.iracingapi.apicalls.drivername_search import searchDriverName
 from _backend.iracingapi.apicalls.recent_races import requestSubessionId
 from _backend.iracingapi.dataprocessors.dataprocessor import Dataprocessor
 from _backend.iracingapi.session.sessionmanager import SessionManager
+from _backend.services.delta.deltadiagram import DeltaDiagram
+from _backend.services.laptime import LaptimeDiagram
 
 
 async def findAndSaveIdForName(sessionManager: SessionManager, member_name: str, discord_id: int):
@@ -30,26 +29,6 @@ async def findNameAndSaveIdForId(sessionManager: SessionManager, member_id: int,
         apiDatabase().updateMemberId(member_id, discord_id)
 
     return member_name
-
-async def getBoxplotImage(sessionManager, params):
-    subsessionId = params.get("subsession_id", None)
-    selectedSession = params.get("selected_session", None)
-    userId = params.get("memberId", None)
-
-    if not subsessionId:
-        subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
-
-    dataInDatabase = loadSessionFromDatabase(userId, subsessionId)
-
-    if dataInDatabase:
-        data = dataInDatabase
-    else:
-        data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
-        saveSessionToDatabase(userId, subsessionId, data)
-
-    fileLocation = BoxplotDiagram(data, params).draw()
-
-    return fileLocation
 
 async def getDeltaImage(sessionManager, params):
     subsessionId = params.get("subsession_id", None)

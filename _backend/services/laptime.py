@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt, patches
 
-from _backend.diagrams.diagram import Diagram
+from _backend.services.diagram import Diagram
 
 
 # ToDo: select only a handful of players for comparison

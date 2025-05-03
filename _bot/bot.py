@@ -1,16 +1,18 @@
 import asyncio
 import os
-import time
 
 import discord
 import discord.app_commands
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from _api.api import getBoxplotImage, getDeltaImage, findNameAndSaveIdForId, findAndSaveIdForName
+from _api.api import findNameAndSaveIdForId, findAndSaveIdForName
 from _api.apiDatabase import apiDatabase
-from _backend.diagrams.delta import ReferenceMode, SelectionMode
 from _backend.iracingapi.session.sessionmanager import SessionManager
+from _backend.services.boxplot.boxplotoptions import BoxplotOptions
+from _backend.services.boxplot.boxplotservice import BoxplotService
+from _backend.services.delta.deltaoptions import DeltaOptions, ReferenceMode, SelectionMode
+from _backend.services.delta.deltaservice import DeltaService
 from _backend.services.median.medianoptions import MedianOptions
 from _backend.services.median.medianservice import MedianService
 from _bot import botUtils
@@ -170,8 +172,9 @@ class DiscordBot():
                 # image response
                 await interaction.response.defer()
 
-                params = {"memberId": memberIdDatabase, "selected_session": selected_session, "subsession_id": subsession_id, "show_real_name": show_real_name, "show_laptimes": show_laptimes, "show_discdisq": show_discdisq}
-                imagefileLocation = await asyncio.wait_for(getBoxplotImage(sessionManager, params), 20)
+                params = BotParams(memberIdDatabase, selected_session, subsession_id)
+                options = BoxplotOptions(None, show_laptimes, show_real_name, show_discdisq)
+                imagefileLocation = await asyncio.wait_for(BoxplotService().getBoxplotImage(sessionManager, params, options), 20)
 
                 file = discord.File(imagefileLocation)
                 await interaction.followup.send(file=file)
@@ -225,8 +228,7 @@ class DiscordBot():
 
                 params = BotParams(memberIdDatabase, selected_session, subsession_id)
                 options = MedianOptions(max_seconds, show_real_name, show_discdisq)
-                imagefileLocation = await asyncio.wait_for(
-                    MedianService().getMedianImage(sessionManager, params, options), 20)
+                imagefileLocation = await asyncio.wait_for(MedianService().getMedianImage(sessionManager, params, options), 20)
 
                 file = discord.File(imagefileLocation)
                 await interaction.followup.send(file=file)
@@ -264,8 +266,11 @@ class DiscordBot():
                         selection: int | None,
                         show_discdisq: bool | None):
 
+            sessionManager = SessionManager()
+            sessionManager.newSession(self.cookieJar)
+
             try:
-                start_time = time.perf_counter()
+                start = await start_timer()
 
                 discordId = interaction.user.id
                 memberIdDatabase = self.apiDatabase.getMemberIdForDiscordId(discordId)
@@ -282,16 +287,19 @@ class DiscordBot():
                 # image response
                 await interaction.response.defer()
 
-                params = {"memberId": memberIdDatabase, "selected_session": selected_session, "subsession_id": subsession_id, "show_real_name": show_real_name, "reference": reference, "selection": selection, "show_discdisq": show_discdisq}
-                imagefileLocation = await asyncio.wait_for(getDeltaImage(self.cookieJar, params), 20)
+                params = BotParams(memberIdDatabase, selected_session, subsession_id)
+                options = DeltaOptions(None, show_real_name, show_discdisq, reference, selection)
+                imagefileLocation = await asyncio.wait_for(DeltaService().getDeltaImage(sessionManager, params, options), 20)
+
                 file = discord.File(imagefileLocation)
                 await interaction.followup.send(file=file)
 
-                end_time = time.perf_counter()
-                execution_time = end_time - start_time
-                print(f"{execution_time:.2f} seconds")
+                await end_timer(start)
 
                 return
 
+
             except Exception as e:
                 await botUtils.handleException(e, interaction)
+            finally:
+                await closeSession(sessionManager)

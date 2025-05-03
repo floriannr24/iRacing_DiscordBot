@@ -1,19 +1,18 @@
-class BoxplotData:
+class DeltaData:
 
     def __init__(self):
-        self.driverNames = None
-        self.finishPositions = None
-        self.carIds = None
-        self.laps = None
-        self.runningLaps = None
+        self.drivers = None
+        self.numberOfLaps = None
 
-        self.userDriverName = None
+        self.driverNames = None
+
         self.userDriverIndex = None
+        self.yMax = None
+        self.yMin = None
 
         self.sof = None
         self.trackName = None
         self.seriesName = None
-        self.seriesId = None
         self.sessionTime = None
         self.subsessionId = None
         self.isRainySession = None

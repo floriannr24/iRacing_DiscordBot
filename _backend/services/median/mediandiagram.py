@@ -12,8 +12,8 @@ from matplotlib.patches import Ellipse
 from matplotlib.ticker import FuncFormatter
 from skimage.transform import resize
 
-from _backend.diagrams.diagram import Diagram
-from _backend.diagrams.images.imageLoader import readCarLogoImages, readSeriesLogoImage
+from _backend.images.imageLoader import readCarLogoImages, readSeriesLogoImage
+from _backend.services.diagram import Diagram
 from _backend.services.median.mediandata import MedianData
 from _backend.services.median.medianoptions import MedianOptions
 

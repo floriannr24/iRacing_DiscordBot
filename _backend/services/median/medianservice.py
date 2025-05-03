@@ -3,10 +3,10 @@ import math
 from datetime import timedelta
 
 from _api.api import loadSessionFromDatabase, saveSessionToDatabase
-from _backend.diagrams.median import MedianDiagram
 from _backend.iracingapi.apicalls.recent_races import requestSubessionId
 from _backend.iracingapi.dataprocessors.dataprocessor import Dataprocessor
 from _backend.services.median.mediandata import MedianData
+from _backend.services.median.mediandiagram import MedianDiagram
 from _backend.services.median.medianoptions import MedianOptions
 from _bot.botUtils import BotParams
 
@@ -32,13 +32,13 @@ class MedianService:
             data = await Dataprocessor().getData(memberId, subsessionId, sessionManager)
             saveSessionToDatabase(memberId, subsessionId, data)
 
-        medianData = self.prepareMedianData(data, medianOptions)
+        medianData = self.initMedianData(data, medianOptions)
 
         fileLocation = MedianDiagram(medianData=medianData, medianOptions=medianOptions).draw()
 
         return fileLocation
 
-    def prepareMedianData(self, originalData, options: MedianOptions):
+    def initMedianData(self, originalData, options: MedianOptions):
 
         data = self.prepareData(originalData, options.showDiscDisq)
 
@@ -154,11 +154,10 @@ class MedianService:
         return [driver["laps"] for driver in data["drivers"]]
 
     def prepareData(self, originalData, showDiscDisq):
-        if showDiscDisq:
-            data = copy.deepcopy(originalData)
-        else:
-            data = copy.deepcopy(originalData)
 
+        data = copy.deepcopy(originalData)
+
+        if not showDiscDisq:
             # always include userdriver, even if he disc/disq
             user_driver_id = originalData["metadata"]["user_driver_id"]
             data["drivers"] = [driver for driver in originalData["drivers"] if

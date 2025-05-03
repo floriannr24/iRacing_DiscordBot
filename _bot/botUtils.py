@@ -64,7 +64,7 @@ async def handleException(exception, interaction) -> None:
         print(f"ERROR:\n"
             f"  type: {embed.name}\n"
             f"  user: {interaction.user} ({interaction.user.id}),\n"
-            f"  data: {{command: '{interaction.data['name']}', options: '{interaction.data['options']} }}")
+              f"  data: {{command: '{interaction.data['name']}', options: '{interaction.data['options']} }}")
 
     await interaction.followup.send(embed=embed.value, ephemeral=True)
     return
