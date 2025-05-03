@@ -11,8 +11,8 @@ from _api.api import getBoxplotImage, getDeltaImage, findNameAndSaveIdForId, fin
 from _api.apiDatabase import apiDatabase
 from _backend.diagrams.delta import ReferenceMode, SelectionMode
 from _backend.iracingapi.session.sessionmanager import SessionManager
-from _backend.services.median.MedianOptions import MedianOptions
-from _backend.services.median.MedianService import MedianService
+from _backend.services.median.medianoptions import MedianOptions
+from _backend.services.median.medianservice import MedianService
 from _bot import botUtils
 from _bot.botUtils import start_timer, end_timer, closeSession, BotParams
 

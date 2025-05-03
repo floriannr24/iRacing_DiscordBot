@@ -4,8 +4,8 @@ import os
 from dotenv import load_dotenv
 
 from _backend.iracingapi.session.sessionmanager import SessionManager
-from _backend.services.median.MedianOptions import MedianOptions
-from _backend.services.median.MedianService import MedianService
+from _backend.services.median.medianoptions import MedianOptions
+from _backend.services.median.medianservice import MedianService
 from _bot.bot import DiscordBot
 from _bot.botUtils import BotParams
 
@@ -13,7 +13,9 @@ from _bot.botUtils import BotParams
 async def runBackend():
 
     sessionManager = await initSessionForDev()
-    await MedianService().getMedianImage(sessionManager, BotParams(817320, -1, None), MedianOptions(None, False, True))
+    await MedianService().getMedianImage(sessionManager,
+                                         BotParams(817320, -1, None),
+                                         MedianOptions(None, False, False))
     # await getMedianImage(None, params={"memberId": 817346, "subsession_id": 50967190, "max_seconds": 10})
     # await getMedianImage(None, params={"memberId": 817346, "subsession_id": 50826694})
 

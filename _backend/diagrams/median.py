@@ -14,8 +14,8 @@ from skimage.transform import resize
 
 from _backend.diagrams.diagram import Diagram
 from _backend.diagrams.images.imageLoader import readCarLogoImages, readSeriesLogoImage
-from _backend.services.median import MedianData
-from _backend.services.median import MedianOptions
+from _backend.services.median.mediandata import MedianData
+from _backend.services.median.medianoptions import MedianOptions
 
 
 class MedianDiagram(Diagram):

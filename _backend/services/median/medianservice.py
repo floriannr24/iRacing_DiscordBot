@@ -6,8 +6,8 @@ from _api.api import loadSessionFromDatabase, saveSessionToDatabase
 from _backend.diagrams.median import MedianDiagram
 from _backend.iracingapi.apicalls.recent_races import requestSubessionId
 from _backend.iracingapi.dataprocessors.dataprocessor import Dataprocessor
-from _backend.services.median.MedianData import MedianData
-from _backend.services.median.MedianOptions import MedianOptions
+from _backend.services.median.mediandata import MedianData
+from _backend.services.median.medianoptions import MedianOptions
 from _bot.botUtils import BotParams
 
 
