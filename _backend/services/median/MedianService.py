@@ -1,3 +1,4 @@
+import copy
 import math
 from datetime import timedelta
 
@@ -6,6 +7,8 @@ from _backend.diagrams.median import MedianDiagram
 from _backend.iracingapi.apicalls.recent_races import requestSubessionId
 from _backend.iracingapi.dataprocessors.dataprocessor import Dataprocessor
 from _backend.services.median.MedianData import MedianData
+from _backend.services.median.MedianOptions import MedianOptions
+from _bot.botUtils import BotParams
 
 
 class MedianService:
@@ -13,21 +16,21 @@ class MedianService:
     def __init__(self):
         pass
 
-    async def getMedianImage(self, sessionManager, params, medianOptions):
-        subsessionId = params.get("subsession_id", None)
-        selectedSession = params.get("selected_session", None)
-        userId = params.get("memberId", None)
+    async def getMedianImage(self, sessionManager, params: BotParams, medianOptions: MedianOptions):
+        subsessionId = params.subsessionId
+        selectedSession = params.selectedSession
+        memberId = params.memberId
 
         if not subsessionId:
-            subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
+            subsessionId = await requestSubessionId(memberId, selectedSession, sessionManager)
 
-        dataInDatabase = loadSessionFromDatabase(userId, subsessionId)
+        dataInDatabase = loadSessionFromDatabase(memberId, subsessionId)
 
         if dataInDatabase:
             data = dataInDatabase
         else:
-            data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
-            saveSessionToDatabase(userId, subsessionId, data)
+            data = await Dataprocessor().getData(memberId, subsessionId, sessionManager)
+            saveSessionToDatabase(memberId, subsessionId, data)
 
         medianData = self.prepareMedianData(data, medianOptions)
 
@@ -35,28 +38,29 @@ class MedianService:
 
         return fileLocation
 
-    def prepareMedianData(self, data, options):
-        medianData = MedianData()
+    def prepareMedianData(self, originalData, options: MedianOptions):
+
+        data = self.prepareData(originalData, options.showDiscDisq)
 
         userDriverName = self.getUserDriverName(data)
         driverNames = self.getDriverNames(data)
         userDriverIndex = self.getUserDriverIndex(driverNames, userDriverName)
+        medianDeltasRunning = self.getMedianDeltaRunning(data, userDriverIndex)
+        xMin, xMax = self.calculateXMinMax(medianDeltasRunning)
 
-        xMin, xMax = self.calculateXMinMax(self.getMedianDeltaRunning(data, userDriverIndex))
-
+        medianData = MedianData()
         medianData.xMin = xMin
         medianData.xMax = xMax
-        medianData.driverNames = self.getDriverNames(data)
+        medianData.driverNames = driverNames
         medianData.finishPositions = self.getFinishPositions(data)
         medianData.sof = self.getSof(data)
         medianData.carIds = self.getCarIds(data)
         medianData.seriesName = self.getSeriesName(data)
         medianData.trackName = self.getTrackName(data)
         medianData.sessionTime = self.getSessionTime(data)
-        medianData.medianDeltaRunning = self.getMedianDeltaRunning(data, userDriverIndex)
+        medianData.medianDeltaRunning = medianDeltasRunning
         medianData.subsessionId = self.getSubsessionId(data)
         medianData.userDriverName = userDriverName
-        medianData.driverNames = driverNames
         medianData.medianDeltas = self.getMedianDelta(data, userDriverIndex)
         medianData.isRainySession = self.getRainInfo(data)
         medianData.medians = self.getMedian(data)
@@ -151,12 +155,16 @@ class MedianService:
 
     def prepareData(self, originalData, showDiscDisq):
         if showDiscDisq:
-            return originalData
-        else:  # always include userdriver, even if disc/disq
+            data = copy.deepcopy(originalData)
+        else:
+            data = copy.deepcopy(originalData)
+
+            # always include userdriver, even if he disc/disq
             user_driver_id = originalData["metadata"]["user_driver_id"]
-            originalData["drivers"] = [driver for driver in originalData["drivers"] if
-                                       driver["result_status"] == "Running" or driver["id"] == user_driver_id]
-            return originalData
+            data["drivers"] = [driver for driver in originalData["drivers"] if
+                               driver["result_status"] == "Running" or driver["id"] == user_driver_id]
+
+        return data
 
     def formatMedianDeltas(self, data, userIndex):
         medians = [driver["median"] for driver in data["drivers"]]
@@ -194,9 +202,6 @@ class MedianService:
 
     def formatMedians(self, medians):
         return [self.formatLaptime(x) for x in medians]
-
-    def getTrackId(self, data):
-        return data["metadata"]["track_id"]
 
     def getXMedians(selfs, medianDeltas):
         return [0 if x == None else x for x in medianDeltas]

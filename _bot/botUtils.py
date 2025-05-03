@@ -88,3 +88,10 @@ async def start_timer():
 async def closeSession(sessionManager: SessionManager):
     if sessionManager.session and not sessionManager.session.closed:
         await sessionManager.session.close()
+
+
+class BotParams():
+    def __init__(self, memberId, selectedSession, subsessionId):
+        self.memberId = memberId
+        self.selectedSession = selectedSession
+        self.subsessionId = subsessionId

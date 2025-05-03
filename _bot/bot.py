@@ -14,7 +14,7 @@ from _backend.iracingapi.session.sessionmanager import SessionManager
 from _backend.services.median.MedianOptions import MedianOptions
 from _backend.services.median.MedianService import MedianService
 from _bot import botUtils
-from _bot.botUtils import start_timer, end_timer, closeSession
+from _bot.botUtils import start_timer, end_timer, closeSession, BotParams
 
 
 class DiscordBot():
@@ -223,8 +223,7 @@ class DiscordBot():
                 # image response
                 await interaction.response.defer()
 
-                params = {"memberId": memberIdDatabase, "selected_session": selected_session,
-                          "subsession_id": subsession_id}
+                params = BotParams(memberIdDatabase, selected_session, subsession_id)
                 options = MedianOptions(max_seconds, show_real_name, show_discdisq)
                 imagefileLocation = await asyncio.wait_for(
                     MedianService().getMedianImage(sessionManager, params, options), 20)

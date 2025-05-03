@@ -38,13 +38,8 @@ class MedianDiagram(Diagram):
         self.barplot = self.drawBarplot()
 
         # format boxplot
-        xMin = self.data.xMin
-        xMax = self.data.xMax
 
-        if not self.options.maxSeconds is None:
-            xMax = abs(self.options.maxSeconds)
-
-        self.limitXAxis(xMin, xMax)
+        self.limitXAxis()
         self.limitYAxis()
 
         self.setXLabels()
@@ -57,7 +52,7 @@ class MedianDiagram(Diagram):
         self.colorNegativeDelta()
         self.colorPositiveDelta()
 
-        if self.options.showFakeName:
+        if not self.options.showRealName:
             self.replaceName()
 
         self.highlightDrivername()
@@ -166,8 +161,16 @@ class MedianDiagram(Diagram):
         plt.gca().invert_yaxis()
         return barplot
 
-    def limitXAxis(self, ymin, ymax):
-        self.ax1.set(xlim=(ymin, ymax))
+    def limitXAxis(self):
+
+        if self.options.maxSeconds:
+            xMax = abs(self.options.maxSeconds)
+        else:
+            xMax = self.data.xMax
+
+        xMin = self.data.xMin
+
+        self.ax1.set(xlim=(xMin, xMax))
 
     def setYLabels(self):
 
@@ -300,7 +303,7 @@ class MedianDiagram(Diagram):
     def setGrid(self):
         self.ax1.grid(visible=False)
 
-        # repaint all vertical gridlines, apart from line at x=0
+        # repaint all vertical gridlines, except line at x=0
         xticks = self.ax1.get_xticks()
         for xtick in xticks:
             if xtick != 0:
