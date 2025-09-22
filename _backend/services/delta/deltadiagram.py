@@ -177,7 +177,7 @@ class DeltaDiagram(Diagram):
         yMin = self.data.yMin
         yMax = self.data.yMax
 
-        driverNames = self.data.driverNames
+        driverNames = self.data.driverNamesWithCarNumber
 
         step = 2.5
 

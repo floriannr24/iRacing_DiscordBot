@@ -49,6 +49,7 @@ class DeltaService:
         deltadata.drivers = self.getDrivers(data)
         deltadata.numberOfLaps = self.getNumberOfLaps(data)
         deltadata.driverNames = driverNames
+        deltadata.driverNamesWithCarNumber = self.getDriverNamesWithCarNumber(data)
         deltadata.userDriverIndex = self.getUserDriverIndex(driverNames, userDriverName)
         deltadata.yMin = yMin
         deltadata.yMax = yMax
@@ -168,3 +169,6 @@ class DeltaService:
 
     def getDrivers(self, data):
         return data["drivers"]
+
+    def getDriverNamesWithCarNumber(self, data):
+        return [f"#{driver['car_number']} {driver['name']}" for driver in data["drivers"]]

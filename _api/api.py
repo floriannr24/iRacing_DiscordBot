@@ -30,26 +30,6 @@ async def findNameAndSaveIdForId(sessionManager: SessionManager, member_id: int,
 
     return member_name
 
-async def getDeltaImage(sessionManager, params):
-    subsessionId = params.get("subsession_id", None)
-    selectedSession = params.get("selected_session", None)
-    userId = params.get("memberId", None)
-
-    if not subsessionId:
-        subsessionId = await requestSubessionId(userId, selectedSession, sessionManager)
-
-    dataInDatabase = loadSessionFromDatabase(userId, subsessionId)
-
-    if dataInDatabase:
-        data = dataInDatabase
-    else:
-        data = await Dataprocessor().getData(userId, subsessionId, sessionManager)
-        saveSessionToDatabase(userId, subsessionId, data)
-
-    fileLocation = DeltaDiagram(data, params).draw()
-
-    return fileLocation
-
 async def getLaptimeImage(**kwargs):
     selectedSession = kwargs.get('selectedSession', None)
     subsessionId = kwargs.get('subsessionId', None)

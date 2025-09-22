@@ -305,18 +305,15 @@ class BoxplotDiagram(Diagram):
         sof = self.data.sof
         subsessionId = self.data.subsessionId
 
-        text_obj = self.fig.text(0.5, locationSeriesNameY0, seriesName, fontsize=16, fontweight="1000",
-                                 color=self.text_color, horizontalalignment="center")
+        text_obj = self.fig.text(0.5, locationSeriesNameY0, seriesName, fontsize=16, fontweight="1000", color=self.text_color, horizontalalignment="center")
         self.fig.text(0.5, locationSeriesNameY0 - space, trackName, color=self.text_color, horizontalalignment="center")
-        self.fig.text(0.5, locationSeriesNameY0 - space * 2, f"{sessionTime} | SOF: {sof}", color=self.text_color,
-                      horizontalalignment="center")
-        self.fig.text(0.5, locationSeriesNameY0 - space * 3, f"ID: {subsessionId}", color=self.text_color,
-                      horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space * 2, f"{sessionTime} | SOF: {sof}", color=self.text_color, horizontalalignment="center")
+        self.fig.text(0.5, locationSeriesNameY0 - space * 3, f"ID: {subsessionId}", color=self.text_color, horizontalalignment="center")
 
         return text_obj
 
     def adjustWidthToPreventOverlap(self, textobj, seriesimgobj):
-        # adjust plot-width to prevent overlap between seriesText and seriesImage
+        # adjust plot-width to prevent overlap of seriesText and seriesImage
 
         if not textobj is None and not seriesimgobj is None:
 

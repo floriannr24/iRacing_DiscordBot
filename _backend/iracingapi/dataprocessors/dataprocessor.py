@@ -120,8 +120,9 @@ class Dataprocessor:
             "result_status": self.get_resultStatus(driver_id),
             "laps_completed": self.get_lapsCompleted(list_of_positions),
             "laps": laps,
-            "car_class_name": self.get_carClass(driver_id)["name"],
+            "car_class_name": self.get_carClass(driver_id),
             "car_id": self.get_carId(driver_id),
+            "car_number": self.get_carNumber(driver_id),
             "personal_best": self.get_fastestPersonalLap(driver_id),
             "fastest_lap": self.get_ifDriverSetFastestLapInSession(driver_id),
             "irating": self.get_iRating(driver_id),
@@ -172,13 +173,13 @@ class Dataprocessor:
 
     def get_carClass(self, driver_id):
 
-        carClass = {}
+        carClass = ""
 
         raceSessionResult = self.getRaceSessionResultOfEvent()
 
         for data in raceSessionResult["results"]:
             if data["cust_id"] == driver_id:
-                carClass["name"] = data["car_class_name"]
+                carClass = data["car_class_name"]
                 break
 
         return carClass
@@ -304,6 +305,19 @@ class Dataprocessor:
                 driver["finish_position_in_class"] = 'DISC'
             if driver["result_status"] == "Disqualified":
                 driver["finish_position_in_class"] = 'DISQ'
+
+    def get_carNumber(self, driver_id):
+
+        carNumber = ""
+
+        raceSessionResult = self.getRaceSessionResultOfEvent()
+
+        for data in raceSessionResult["results"]:
+            if data["cust_id"] == driver_id:
+                carNumber = data["livery"]["car_number"]
+                break
+
+        return carNumber
 
 
 

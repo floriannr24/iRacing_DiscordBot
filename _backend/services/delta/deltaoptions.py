@@ -21,3 +21,5 @@ class DeltaOptions:
         self.showDiscDisq = showDiscDisq
         self.referenceMode = referenceMode
         self.selectionMode = selectionMode
+        # selection mode - enter driver numbers for selection instead?
+        # reference mode - number based?

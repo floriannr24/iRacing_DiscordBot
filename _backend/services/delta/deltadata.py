@@ -5,6 +5,7 @@ class DeltaData:
         self.numberOfLaps = None
 
         self.driverNames = None
+        self.driverNamesWithCarNumber = None
 
         self.userDriverIndex = None
         self.yMax = None
