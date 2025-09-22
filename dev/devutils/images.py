@@ -105,6 +105,6 @@ if __name__ == "__main__":
     environment = os.environ.get("APP_ENV", "development")
     load_dotenv(f"../../.env.{environment}")
 
-    asyncio.run(requestSeriesLogos())
-    # asyncio.run(requestCarLogos())
+    # asyncio.run(requestSeriesLogos())
+    asyncio.run(requestCarLogos())
     # asyncio.run(requestTrackmaps())
